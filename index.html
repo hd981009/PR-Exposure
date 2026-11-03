@@ -57,7 +57,7 @@
                         </button>
                     </nav>
 
-                    <!-- Config Backup / Restore Dropdown or Buttons -->
+                    <!-- Config Backup / Restore -->
                     <div class="hidden md:flex items-center space-x-1 pl-3 border-l border-slate-700">
                         <button onclick="exportConfig()" title="匯出新聞稿與記者設定檔供交接使用" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition flex items-center gap-1 border border-slate-700">
                             <i data-lucide="download-cloud" class="w-3.5 h-3.5 text-blue-400"></i>
@@ -169,9 +169,9 @@
                     <div>
                         <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
                             <i data-lucide="table" class="w-4 h-4 text-blue-600"></i>
-                            已監測新聞明細表 (訊息標題帶超連結)
+                            已監測新聞明細表 (具備自動去重防呆)
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">點擊訊息標題可開啟連結檢視；支援下拉選單直接人工覆核。</p>
+                        <p class="text-xs text-slate-400 mt-0.5">點擊訊息標題可直接開啟原新聞連結；支援下拉選單人工覆核。</p>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -205,7 +205,7 @@
                             <tr>
                                 <th class="p-3 w-12 text-center">序號</th>
                                 <th class="p-3 w-24">日期</th>
-                                <th class="p-3 w-28">媒體名稱</th>
+                                <th class="p-3 w-32">媒體名稱</th>
                                 <th class="p-3">訊息標題 (點擊可開啟原新聞)</th>
                                 <th class="p-3 w-28">記者</th>
                                 <th class="p-3 w-32 text-center">是否由新聞稿促成</th>
@@ -238,7 +238,7 @@
                     </div>
                     <h2 class="text-xl font-bold text-slate-800">匯入監測 Excel / CSV 檔案</h2>
                     <p class="text-xs text-slate-500 mt-1">
-                        上傳包含新聞監測紀錄的試算表。系統將會<strong class="text-blue-600">自動排查重複新聞</strong>，並即時比對本會新聞稿庫與記者資料庫。
+                        上傳包含新聞監測紀錄的試算表。系統將會啟用<strong class="text-blue-600">自動防呆去重機制</strong>，避免重複匯入。
                     </p>
                 </div>
 
@@ -254,12 +254,11 @@
                 <div class="mt-6 bg-slate-50 rounded-xl p-4 border border-slate-200 text-xs text-slate-600 space-y-2">
                     <p class="font-bold text-slate-700 flex items-center gap-1.5">
                         <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
-                        欄位需求與建議：
+                        欄位對應說明：
                     </p>
                     <ul class="list-disc list-inside space-y-1 text-slate-500">
-                        <li>試算表需包含欄位：<strong>標題（訊息標題）、媒體名稱、監測日期/日期、記者、網站連結 (選填)</strong>。</li>
-                        <li>系統會依據 <strong>「標題 + 媒體 + 發布日期」</strong> 自動排查，重複的資料將不會被重複計算。</li>
-                        <li>自動剔除 PChome、Yam蕃薯藤、MSN、Yahoo 等廣播平台轉載報導。</li>
+                        <li>自動對應欄位：<strong>訊息標題、媒體名稱（如工商時報、中央社）、日期、記者、網站連結</strong>。</li>
+                        <li><strong>防呆去重</strong>：若匯入的資料標題、媒體與日期與現有資料完全相同，系統將自動略過不重複計算。</li>
                     </ul>
                 </div>
             </div>
@@ -741,7 +740,7 @@
                 const titleHtml = item.url 
                     ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline flex items-center gap-1 font-medium group">
                         <span>${item.title || '-'}</span>
-                        <i data-lucide="external-link" class="w-3 h-3 text-blue-400 group-hover:text-blue-600"></i>
+                        <i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-500 group-hover:text-blue-700 shrink-0"></i>
                        </a>`
                     : `<span class="font-medium">${item.title || '-'}</span>`;
 
@@ -779,7 +778,7 @@
             lucide.createIcons();
         }
 
-        // ==================== FILE IMPORT & DEDUPLICATION ====================
+        // ==================== FILE IMPORT & DEDUPLICATION (ROBUST) ====================
         function handleFileSelect(evt) {
             const file = evt.target.files[0];
             if (!file) return;
@@ -816,16 +815,18 @@
             
             const colTitleIdx = headers.findIndex(h => h.includes('標題'));
             
-            let colMediaIdx = headers.findIndex(h => h === '媒體名稱');
+            // Explicitly search for exact "媒體名稱" column, fallback if needed
+            let colMediaIdx = headers.indexOf('媒體名稱');
             if (colMediaIdx === -1) {
                 colMediaIdx = headers.findIndex(h => h.includes('媒體名稱'));
             }
             if (colMediaIdx === -1) {
-                let fallbackIdx = headers.findIndex(h => h === '媒體' || h.includes('媒體'));
-                if (fallbackIdx !== -1 && fallbackIdx + 1 < headers.length) {
-                    colMediaIdx = fallbackIdx + 1;
+                // If only "媒體" exists, check column index
+                let catIdx = headers.indexOf('媒體');
+                if (catIdx !== -1 && catIdx + 1 < headers.length) {
+                    colMediaIdx = catIdx + 1; // Usually "媒體名稱" is right after "媒體"
                 } else {
-                    colMediaIdx = fallbackIdx;
+                    colMediaIdx = headers.findIndex(h => h.includes('媒體'));
                 }
             }
 
@@ -841,6 +842,7 @@
             let newCount = 0;
             let dupCount = 0;
 
+            // Existing uniqueness set (Title + Media + Date) for deduplication
             const existingKeys = new Set(state.newsData.map(i => `${i.title}_${i.media}_${i.date}`));
 
             for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -848,12 +850,14 @@
                 if (!row || row.length === 0) continue;
 
                 const title = String(row[colTitleIdx] || '').trim();
-                let media = colMediaIdx !== -1 ? String(row[colMediaIdx] || '').trim() : '未知媒體';
+                let media = colMediaIdx !== -1 ? String(row[colMediaIdx] || '').trim() : '';
                 
+                // Safety check: if media picked category like '網路' or '報紙', grab next column
                 if ((media === '網路' || media === '報紙') && row.length > colMediaIdx + 1) {
                     const nextVal = String(row[colMediaIdx + 1] || '').trim();
                     if (nextVal && nextVal !== 'undefined') media = nextVal;
                 }
+                if (!media || media === 'undefined') media = '未知媒體';
 
                 let date = colDateIdx !== -1 ? String(row[colDateIdx] || '').trim() : '';
                 const reporter = colReporterIdx !== -1 ? String(row[colReporterIdx] || '').trim() : '';
@@ -878,7 +882,7 @@
             }
 
             reanalyzeAllNews();
-            showToast(`成功匯入 ${newCount} 則新新聞 (自動排除 ${dupCount} 則重複新聞)`);
+            showToast(`成功匯入 ${newCount} 則新新聞 (自動防呆去重：已排除 ${dupCount} 則重複新聞)`);
             switchTab('dashboard');
         }
 
