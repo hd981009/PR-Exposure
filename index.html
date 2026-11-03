@@ -154,9 +154,9 @@
                     <div>
                         <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
                             <i data-lucide="table" class="w-4 h-4 text-blue-600"></i>
-                            已監測新聞明細表
+                            已監測新聞明細表 (支援人工覆核與即時修改)
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">點擊各欄位可進行篩選與搜尋，亮綠色底色代表【原生報導】</p>
+                        <p class="text-xs text-slate-400 mt-0.5">可以直接在表格中切換下拉選單進行微調，系統會鎖定人工修正結果。</p>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -172,6 +172,7 @@
                             <option value="NATIVE" selected>★ 僅看原生報導 (KPI必看)</option>
                             <option value="PR_ALL">新聞稿促成 (原生+轉載)</option>
                             <option value="REPRINT">僅看轉載報導</option>
+                            <option value="OVERRIDDEN">★ 僅看人工覆核資料</option>
                         </select>
 
                         <!-- Export Button -->
@@ -192,8 +193,8 @@
                                 <th class="p-3 w-28">媒體名稱</th>
                                 <th class="p-3">訊息標題</th>
                                 <th class="p-3 w-28">記者</th>
-                                <th class="p-3 w-28 text-center">是否由新聞稿促成</th>
-                                <th class="p-3 w-28 text-center">報導性質</th>
+                                <th class="p-3 w-32 text-center">是否由新聞稿促成</th>
+                                <th class="p-3 w-36 text-center">報導性質 (人工覆核)</th>
                                 <th class="p-3 w-48">備註說明與原生歸屬</th>
                             </tr>
                         </thead>
@@ -449,25 +450,31 @@
 
         // ==================== NATIVE & REPRINT REASONING ENGINE ====================
         function analyzeItem(item, seenStoriesMap) {
+            // Respect manual override if user has lock set
+            if (item.isManual) {
+                return {
+                    isPr: item.isPr,
+                    type: item.type,
+                    note: item.note
+                };
+            }
+
             const title = (item.title || '').trim();
             const media = (item.media || '').trim();
             const reporter = (item.reporter || '').trim();
 
             // 1. Check PR relatedness
             let isPr = false;
-            let matchedPrTitle = '';
 
             for (const pr of state.pressReleases) {
                 if (pr.keywords.some(kw => kw && title.includes(kw))) {
                     isPr = true;
-                    matchedPrTitle = pr.title;
                     break;
                 }
             }
 
             if (!isPr && (reporter.includes('對外貿易發展協會') || reporter.includes('外貿協會') || title.includes('貿協'))) {
                 isPr = true;
-                matchedPrTitle = '本會活動/新聞稿報導';
             }
 
             // Exclude unrelated topics
@@ -544,6 +551,48 @@
             saveState();
         }
 
+        // ==================== MANUAL EDIT OVERRIDE HANDLERS ====================
+        function handleManualPrChange(id, value) {
+            const item = state.newsData.find(i => i.id == id);
+            if (!item) return;
+
+            item.isPr = value;
+            item.isManual = true;
+            if (value === '否') {
+                item.type = '非新聞稿促成';
+                item.note = '★ 人工覆核（設定為非新聞稿促成）';
+            } else if (item.type === '非新聞稿促成') {
+                item.type = '原生報導';
+                item.note = '★ 人工覆核（設定為新聞稿促成/原生）';
+            } else {
+                item.note = `★ 人工覆核 (${item.note})`;
+            }
+
+            saveState();
+            renderDashboard();
+            showToast('已完成人工覆核修改');
+        }
+
+        function handleManualTypeChange(id, value) {
+            const item = state.newsData.find(i => i.id == id);
+            if (!item) return;
+
+            item.type = value;
+            item.isManual = true;
+
+            if (value === '非新聞稿促成') {
+                item.isPr = '否';
+                item.note = '★ 人工覆核（非新聞稿促成）';
+            } else {
+                item.isPr = '是';
+                item.note = `★ 人工覆核（指定為 ${value}）`;
+            }
+
+            saveState();
+            renderDashboard();
+            showToast('已完成人工覆核修改');
+        }
+
         // ==================== DASHBOARD & TABLE RENDERERS ====================
         function renderDashboard() {
             const total = state.newsData.length;
@@ -582,7 +631,7 @@
                 }
             });
 
-            // Media Bar Chart (Counts of native articles per media)
+            // Media Bar Chart
             const mediaCounts = {};
             nativeItems.forEach(i => {
                 const m = i.media || '未知媒體';
@@ -618,12 +667,11 @@
             const filterType = document.getElementById('table-filter-type').value;
 
             let filtered = state.newsData.filter(i => {
-                // Filter dropdown
                 if (filterType === 'NATIVE' && i.type !== '原生報導') return false;
                 if (filterType === 'PR_ALL' && i.isPr !== '是') return false;
                 if (filterType === 'REPRINT' && i.type !== '轉載報導') return false;
+                if (filterType === 'OVERRIDDEN' && !i.isManual) return false;
 
-                // Search input
                 if (searchVal) {
                     const matchTitle = (i.title || '').toLowerCase().includes(searchVal);
                     const matchMedia = (i.media || '').toLowerCase().includes(searchVal);
@@ -648,16 +696,26 @@
                     <td class="p-3 font-semibold whitespace-nowrap">${item.media || '-'}</td>
                     <td class="p-3 font-medium">${item.title || '-'}</td>
                     <td class="p-3 whitespace-nowrap">${item.reporter || '-'}</td>
-                    <td class="p-3 text-center font-bold ${item.isPr === '是' ? 'text-emerald-600' : 'text-slate-400'}">${item.isPr}</td>
                     <td class="p-3 text-center">
-                        <span class="px-2 py-1 rounded-md text-[11px] font-bold ${
-                            isNative ? 'bg-emerald-600 text-white shadow-sm' : 
+                        <select onchange="handleManualPrChange('${item.id}', this.value)" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs font-bold ${item.isPr === '是' ? 'text-emerald-600' : 'text-slate-400'}">
+                            <option value="是" ${item.isPr === '是' ? 'selected' : ''}>是</option>
+                            <option value="否" ${item.isPr === '否' ? 'selected' : ''}>否</option>
+                        </select>
+                    </td>
+                    <td class="p-3 text-center">
+                        <select onchange="handleManualTypeChange('${item.id}', this.value)" class="px-2 py-1 rounded text-[11px] font-bold border border-slate-200 shadow-sm ${
+                            isNative ? 'bg-emerald-600 text-white' : 
                             (item.type === '轉載報導' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600')
                         }">
-                            ${item.type}
-                        </span>
+                            <option value="原生報導" ${item.type === '原生報導' ? 'selected' : ''} class="bg-white text-slate-800">原生報導</option>
+                            <option value="轉載報導" ${item.type === '轉載報導' ? 'selected' : ''} class="bg-white text-slate-800">轉載報導</option>
+                            <option value="非新聞稿促成" ${item.type === '非新聞稿促成' ? 'selected' : ''} class="bg-white text-slate-800">非新聞稿促成</option>
+                        </select>
                     </td>
-                    <td class="p-3 text-slate-500">${item.note || '-'}</td>
+                    <td class="p-3 text-slate-500">
+                        ${item.isManual ? '<span class="bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded text-[10px] mr-1">★ 人工覆核</span>' : ''}
+                        ${item.note || '-'}
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -675,7 +733,6 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 
-                // Read sheet 0
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -691,7 +748,6 @@
                 return;
             }
 
-            // Find header index
             let headerIdx = 0;
             for (let i = 0; i < Math.min(rows.length, 5); i++) {
                 if (rows[i].some(cell => String(cell).includes('標題') || String(cell).includes('媒體'))) {
@@ -715,7 +771,6 @@
             let newCount = 0;
             let dupCount = 0;
 
-            // Existing uniqueness set (Title + Media + Date)
             const existingKeys = new Set(state.newsData.map(i => `${i.title}_${i.media}_${i.date}`));
 
             for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -729,7 +784,6 @@
 
                 if (!title || title === 'undefined') continue;
 
-                // Format date string if excel timestamp
                 if (date.includes('T')) date = date.split('T')[0];
 
                 const key = `${title}_${media}_${date}`;
@@ -739,7 +793,8 @@
                     existingKeys.add(key);
                     state.newsData.push({
                         id: Date.now() + Math.random(),
-                        title, media, date, reporter
+                        title, media, date, reporter,
+                        isManual: false
                     });
                     newCount++;
                 }
@@ -765,10 +820,10 @@
                 '記者': item.reporter,
                 '是否由新聞稿促成': item.isPr,
                 '報導性質 (原生/轉載)': item.type,
-                '備註說明': item.note
+                '備註說明與原生歸屬': item.note
             }));
 
-            const worksheet = XLSX.utils.utils ? XLSX.utils.json_to_sheet(exportRows) : XLSX.utils.json_to_sheet(exportRows);
+            const worksheet = XLSX.utils.json_to_sheet(exportRows);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "原生與轉載新聞分析");
 
@@ -867,7 +922,7 @@
             lucide.createIcons();
         }
 
-    function openAddReporterModal() {
+        function openAddReporterModal() {
             document.getElementById('input-rep-name').value = '';
             document.getElementById('input-rep-media').value = '';
             document.getElementById('modal-reporter').classList.remove('hidden');
