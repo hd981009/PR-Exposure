@@ -37,24 +37,39 @@
                     </div>
                 </div>
 
-                <nav class="flex space-x-1 sm:space-x-2">
-                    <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 bg-blue-600 text-white shadow">
-                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-                        <span>分析儀表板</span>
-                    </button>
-                    <button onclick="switchTab('import')" id="tab-btn-import" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
-                        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-                        <span>匯入與收錄資料</span>
-                    </button>
-                    <button onclick="switchTab('press')" id="tab-btn-press" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
-                        <i data-lucide="file-text" class="w-4 h-4"></i>
-                        <span>新聞稿資料庫</span>
-                    </button>
-                    <button onclick="switchTab('reporters')" id="tab-btn-reporters" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
-                        <i data-lucide="users" class="w-4 h-4"></i>
-                        <span>記者對照表</span>
-                    </button>
-                </nav>
+                <div class="flex items-center space-x-3">
+                    <nav class="flex space-x-1 sm:space-x-2">
+                        <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 bg-blue-600 text-white shadow">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                            <span>分析儀表板</span>
+                        </button>
+                        <button onclick="switchTab('import')" id="tab-btn-import" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
+                            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                            <span>匯入與收錄資料</span>
+                        </button>
+                        <button onclick="switchTab('press')" id="tab-btn-press" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>新聞稿資料庫</span>
+                        </button>
+                        <button onclick="switchTab('reporters')" id="tab-btn-reporters" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
+                            <i data-lucide="users" class="w-4 h-4"></i>
+                            <span>記者對照表</span>
+                        </button>
+                    </nav>
+
+                    <!-- Config Backup / Restore Dropdown or Buttons -->
+                    <div class="hidden md:flex items-center space-x-1 pl-3 border-l border-slate-700">
+                        <button onclick="exportConfig()" title="匯出新聞稿與記者設定檔供交接使用" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition flex items-center gap-1 border border-slate-700">
+                            <i data-lucide="download-cloud" class="w-3.5 h-3.5 text-blue-400"></i>
+                            <span>匯出設定</span>
+                        </button>
+                        <button onclick="document.getElementById('config-file-input').click()" title="匯入交接設定檔" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition flex items-center gap-1 border border-slate-700">
+                            <i data-lucide="upload-cloud" class="w-3.5 h-3.5 text-emerald-400"></i>
+                            <span>匯入設定</span>
+                        </button>
+                        <input type="file" id="config-file-input" accept=".json" class="hidden" onchange="importConfig(event)">
+                    </div>
+                </div>
             </div>
         </div>
     </header>
@@ -411,6 +426,50 @@
             localStorage.setItem('taitra_news_data', JSON.stringify(state.newsData));
         }
 
+        // ==================== CONFIG EXPORT / IMPORT ====================
+        function exportConfig() {
+            const configData = {
+                reporters: state.reporters,
+                pressReleases: state.pressReleases
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(configData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `TAITRA_PR_Config_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('已成功匯出系統設定檔（記者與新聞稿庫）');
+        }
+
+        function importConfig(evt) {
+            const file = evt.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.reporters && imported.pressReleases) {
+                        state.reporters = imported.reporters;
+                        state.pressReleases = imported.pressReleases;
+                        saveState();
+                        reanalyzeAllNews();
+                        renderPressReleases();
+                        renderReporters();
+                        renderDashboard();
+                        showToast('設定檔匯入成功！系統已更新。');
+                    } else {
+                        showToast('設定檔格式錯誤，缺少必要欄位', 'error');
+                    }
+                } catch(err) {
+                    showToast('解析設定檔失敗，檔案可能損毀', 'error');
+                }
+                evt.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             reanalyzeAllNews();
@@ -757,16 +816,14 @@
             
             const colTitleIdx = headers.findIndex(h => h.includes('標題'));
             
-            // Smart Media Column Matcher: Prefer "媒體名稱" over "媒體" (which is Category)
             let colMediaIdx = headers.findIndex(h => h === '媒體名稱');
             if (colMediaIdx === -1) {
                 colMediaIdx = headers.findIndex(h => h.includes('媒體名稱'));
             }
             if (colMediaIdx === -1) {
-                // Fallback to "媒體", but check if next column is actual media name
                 let fallbackIdx = headers.findIndex(h => h === '媒體' || h.includes('媒體'));
                 if (fallbackIdx !== -1 && fallbackIdx + 1 < headers.length) {
-                    colMediaIdx = fallbackIdx + 1; // Take column 4 if column 3 is "媒體"
+                    colMediaIdx = fallbackIdx + 1;
                 } else {
                     colMediaIdx = fallbackIdx;
                 }
@@ -793,7 +850,6 @@
                 const title = String(row[colTitleIdx] || '').trim();
                 let media = colMediaIdx !== -1 ? String(row[colMediaIdx] || '').trim() : '未知媒體';
                 
-                // If media accidentally picked "網路" or "報紙", try neighboring column
                 if ((media === '網路' || media === '報紙') && row.length > colMediaIdx + 1) {
                     const nextVal = String(row[colMediaIdx + 1] || '').trim();
                     if (nextVal && nextVal !== 'undefined') media = nextVal;
