@@ -1,957 +1,904 @@
-<!-- Header Navigation -->
-<header class="bg-taitra-800 text-white shadow-lg sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white text-taitra-800 p-2 rounded-lg font-bold text-xl tracking-wider shadow">
-                    <i class="fa-solid fa-chart-line text-taitra-500 mr-1"></i> TAITRA
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight">外貿協會 新聞效益與原生報導辨識系統</h1>
-                    <p class="text-xs text-taitra-100 opacity-80">Public Relations Division • Media Intelligence Tool</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-3">
-                <span id="data-count-badge" class="bg-taitra-700 text-xs px-3 py-1.5 rounded-full border border-taitra-500 text-blue-100 font-medium">
-                    目前收錄: <strong id="total-news-count" class="text-white text-sm">0</strong> 則
-                </span>
-                <button onclick="resetAllData()" class="text-xs bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded transition duration-150 flex items-center space-x-1">
-                    <i class="fa-solid fa-trash-can"></i>
-                    <span>清空系統資料</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</header>
-
-<!-- Main Container -->
-<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
-
-    <!-- System Alert / Toast Message Area -->
-    <div id="toast-container" class="mb-4 hidden transition-all duration-300">
-        <div id="toast-body" class="p-4 rounded-lg border shadow-sm flex items-start space-x-3">
-            <i id="toast-icon" class="fa-solid fa-circle-info mt-0.5 text-lg"></i>
-            <div class="flex-1">
-                <h4 id="toast-title" class="font-semibold text-sm">通知</h4>
-                <p id="toast-message" class="text-xs mt-0.5"></p>
-            </div>
-            <button onclick="dismissToast()" class="text-gray-400 hover:text-gray-600 text-sm">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
-        <div class="flex border-b border-slate-200 overflow-x-auto text-sm font-medium text-slate-600">
-            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-6 py-4 flex items-center space-x-2 tab-active transition-all whitespace-nowrap">
-                <i class="fa-solid fa-square-poll-vertical"></i>
-                <span>分析儀表板與清單</span>
-            </button>
-            <button onclick="switchTab('import')" id="tab-btn-import" class="px-6 py-4 flex items-center space-x-2 hover:text-taitra-500 transition-all whitespace-nowrap">
-                <i class="fa-solid fa-file-import"></i>
-                <span>匯入新聞收錄檔</span>
-            </button>
-            <button onclick="switchTab('press')" id="tab-btn-press" class="px-6 py-4 flex items-center space-x-2 hover:text-taitra-500 transition-all whitespace-nowrap">
-                <i class="fa-solid fa-newspaper"></i>
-                <span>新聞稿庫管理 (<span id="press-count">0</span>)</span>
-            </button>
-            <button onclick="switchTab('reporters')" id="tab-btn-reporters" class="px-6 py-4 flex items-center space-x-2 hover:text-taitra-500 transition-all whitespace-nowrap">
-                <i class="fa-solid fa-address-book"></i>
-                <span>記者與媒體設定</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- TAB 1: DASHBOARD & RESULTS -->
-    <div id="tab-dashboard" class="space-y-6">
-        <!-- KPI Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-2 h-full bg-slate-400"></div>
-                <div class="text-xs font-semibold uppercase text-slate-500 tracking-wider">總收錄新聞數</div>
-                <div class="text-3xl font-bold text-slate-800 mt-2" id="kpi-total">0</div>
-                <div class="text-xs text-slate-500 mt-1">包含所有監測收錄報導</div>
-            </div>
-
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-2 h-full bg-blue-500"></div>
-                <div class="text-xs font-semibold uppercase text-blue-600 tracking-wider">新聞稿促成報導</div>
-                <div class="text-3xl font-bold text-blue-600 mt-2" id="kpi-promoted">0</div>
-                <div class="text-xs text-slate-500 mt-1" id="kpi-promoted-pct">佔比 0%</div>
-            </div>
-
-            <div class="bg-white p-5 rounded-xl border border-emerald-200 shadow-sm relative overflow-hidden bg-emerald-50/20">
-                <div class="absolute top-0 right-0 w-2 h-full bg-emerald-500"></div>
-                <div class="text-xs font-semibold uppercase text-emerald-700 tracking-wider">原生報導（第一則/原創）</div>
-                <div class="text-3xl font-bold text-emerald-600 mt-2" id="kpi-original">0</div>
-                <div class="text-xs text-emerald-700 mt-1" id="kpi-original-pct">核心 KPI 成果</div>
-            </div>
-
-            <div class="bg-white p-5 rounded-xl border border-amber-200 shadow-sm relative overflow-hidden bg-amber-50/20">
-                <div class="absolute top-0 right-0 w-2 h-full bg-amber-500"></div>
-                <div class="text-xs font-semibold uppercase text-amber-700 tracking-wider">轉載報導（聯播/二次轉載）</div>
-                <div class="text-3xl font-bold text-amber-600 mt-2" id="kpi-syndicated">0</div>
-                <div class="text-xs text-amber-700 mt-1">含 PChome, Yam, MSN 等</div>
-            </div>
-        </div>
-
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm md:col-span-1 flex flex-col items-center justify-center">
-                <h3 class="text-sm font-semibold text-slate-700 mb-4 w-full text-left">
-                    <i class="fa-solid fa-chart-pie text-taitra-500 mr-2"></i>報導性質比例
-                </h3>
-                <div class="w-48 h-48 relative">
-                    <canvas id="natureChart"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm md:col-span-2 flex flex-col">
-                <h3 class="text-sm font-semibold text-slate-700 mb-4">
-                    <i class="fa-solid fa-chart-column text-taitra-500 mr-2"></i>前 8 大原生報導媒體排行榜
-                </h3>
-                <div class="flex-1 min-h-[200px] relative">
-                    <canvas id="mediaChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Data Table Section -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div class="flex items-center space-x-2">
-                    <h3 class="font-semibold text-slate-800 text-sm">收錄新聞與判讀明細</h3>
-                    <span id="filtered-count" class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">共 0 筆</span>
-                </div>
-
-                <!-- Filters and Search -->
-                <div class="flex flex-wrap items-center gap-2">
-                    <select id="filter-promoted" onchange="applyFilters()" class="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-taitra-500">
-                        <option value="ALL">新聞稿促成：全部</option>
-                        <option value="YES">僅看：由新聞稿促成</option>
-                        <option value="NO">僅看：非新聞稿促成</option>
-                    </select>
-
-                    <select id="filter-nature" onchange="applyFilters()" class="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-taitra-500">
-                        <option value="ALL">報導性質：全部</option>
-                        <option value="原生報導">原生報導</option>
-                        <option value="轉載報導">轉載報導</option>
-                        <option value="非新聞稿促成">非新聞稿促成</option>
-                    </select>
-
-                    <input type="text" id="filter-search" oninput="applyFilters()" placeholder="搜尋標題、媒體或記者..." class="text-xs border border-slate-300 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-taitra-500 w-40 sm:w-48">
-
-                    <button onclick="exportToExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm transition flex items-center space-x-1">
-                        <i class="fa-solid fa-file-excel text-sm"></i>
-                        <span>匯出 Excel 報告</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Table Content -->
-            <div class="overflow-x-auto custom-scrollbar max-h-[500px]">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead class="bg-slate-100 text-slate-600 sticky top-0 z-10 border-b border-slate-200 uppercase font-semibold">
-                        <tr>
-                            <th class="p-3 w-12 text-center">No.</th>
-                            <th class="p-3 w-24">監測日期</th>
-                            <th class="p-3 w-28">媒體名稱</th>
-                            <th class="p-3 min-w-[240px]">訊息標題</th>
-                            <th class="p-3 w-24">記者</th>
-                            <th class="p-3 w-28 text-center">新聞稿促成</th>
-                            <th class="p-3 w-28 text-center">報導性質</th>
-                            <th class="p-3 min-w-[200px]">判定備註與依據</th>
-                        </tr>
-                    </thead>
-                    <tbody id="news-table-body" class="divide-y divide-slate-100">
-                        <tr>
-                            <td colspan="8" class="text-center py-12 text-slate-400">
-                                <i class="fa-solid fa-inbox text-3xl mb-2 block"></i>
-                                目前尚無新聞資料，請前往「匯入新聞收錄檔」上傳 Excel 或 CSV 檔案。
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- TAB 2: IMPORT DATA -->
-    <div id="tab-import" class="hidden space-y-6">
-        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-3xl mx-auto">
-            <h2 class="text-lg font-bold text-slate-800 mb-2 flex items-center">
-                <i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i>匯入新聞收錄檔案
-            </h2>
-            <p class="text-xs text-slate-500 mb-6">
-                您可以直接上傳含有收錄新聞的 Excel (.xlsx / .xls) 或 CSV 檔。系統將依照您設定的新聞稿清單與記者媒體對照表進行自動判讀，並在匯入時<strong>自動過濾已經存在系統中的重複新聞</strong>。
-            </p>
-
-            <!-- Dropzone Area -->
-            <div id="dropzone" class="border-2 border-dashed border-taitra-500/40 bg-taitra-50/50 hover:bg-taitra-50 hover:border-taitra-500 rounded-xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center">
-                <input type="file" id="file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileSelect(event)">
-                <div class="w-14 h-14 bg-taitra-100 text-taitra-600 rounded-full flex items-center justify-center mb-3 text-2xl">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                </div>
-                <p class="text-sm font-semibold text-slate-700">點擊選擇檔案 或 將檔案拖拽至此處</p>
-                <p class="text-xs text-slate-400 mt-1">支援 .xlsx, .xls, .csv 檔案格式</p>
-                <button type="button" onclick="document.getElementById('file-input').click()" class="mt-4 bg-taitra-500 hover:bg-taitra-600 text-white text-xs px-4 py-2 rounded-lg font-medium shadow-sm transition">
-                    選擇檔案
-                </button>
-            </div>
-
-            <!-- Column Mapping Guide -->
-            <div class="mt-8 bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <h4 class="text-xs font-semibold text-slate-700 mb-2 flex items-center">
-                    <i class="fa-solid fa-circle-question text-slate-400 mr-1.5"></i>系統欄位自動識別說明：
-                </h4>
-                <ul class="text-xs text-slate-600 space-y-1 list-disc list-inside">
-                    <li><strong>監測日期 / 日期</strong>：識別新聞發布時間。</li>
-                    <li><strong>媒體名稱 / 媒體 / 出處</strong>：識別報導刊登之媒體。</li>
-                    <li><strong>訊息標題 / 新聞標題 / 標題</strong>：新聞的主要標題。</li>
-                    <li><strong>記者 / 撰稿人</strong>：用於比對主力記者與跨媒體轉載。</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- TAB 3: PRESS RELEASES MANAGEMENT -->
-    <div id="tab-press" class="hidden space-y-6">
-        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-200 gap-3">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800 flex items-center">
-                        <i class="fa-solid fa-bullhorn text-taitra-500 mr-2"></i>本會發布新聞稿資料庫
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">系統會利用這些關鍵字與發稿日期自動比對收錄報導是否由新聞稿促成。</p>
-                </div>
-                <button onclick="openAddPressModal()" class="bg-taitra-500 hover:bg-taitra-600 text-white text-xs px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center space-x-1">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>追加新聞稿</span>
-                </button>
-            </div>
-
-            <!-- Press Releases Table -->
-            <div class="overflow-x-auto custom-scrollbar">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead class="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold">
-                        <tr>
-                            <th class="p-3 w-12 text-center">No.</th>
-                            <th class="p-3 w-28">發稿日期</th>
-                            <th class="p-3 min-w-[200px]">新聞稿主題 / 活動名稱</th>
-                            <th class="p-3 min-w-[250px]">關鍵字 (用逗點分隔)</th>
-                            <th class="p-3 w-40">備註</th>
-                            <th class="p-3 w-20 text-center">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="press-table-body" class="divide-y divide-slate-100">
-                        <!-- Populated dynamically -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- TAB 4: REPORTERS & MEDIA MAPPING -->
-    <div id="tab-reporters" class="hidden space-y-6">
-        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-200 gap-3">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800 flex items-center">
-                        <i class="fa-solid fa-users text-taitra-500 mr-2"></i>主力記者與媒體對照清單
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">當報導出現於非所屬媒體但標示該記者名字時，系統會自動辨識為「跨媒體轉載」。</p>
-                </div>
-                <button onclick="openAddReporterModal()" class="bg-taitra-500 hover:bg-taitra-600 text-white text-xs px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center space-x-1">
-                    <i class="fa-solid fa-user-plus"></i>
-                    <span>新增記者媒體對應</span>
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="reporter-cards-container">
-                <!-- Populated dynamically -->
-            </div>
-        </div>
-    </div>
-</main>
-
-<!-- Modal: Add Press Release -->
-<div id="modal-press" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden">
-        <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex justify-between items-center">
-            <h3 class="font-bold text-slate-800 text-sm">追加本會發布新聞稿</h3>
-            <button onclick="closeModal('modal-press')" class="text-slate-400 hover:text-slate-600">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div class="p-5 space-y-4 text-xs">
-            <div>
-                <label class="block font-medium text-slate-700 mb-1">發稿日期 *</label>
-                <input type="date" id="press-input-date" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-taitra-500 focus:outline-none">
-            </div>
-            <div>
-                <label class="block font-medium text-slate-700 mb-1">新聞稿活動 / 主題名稱 *</label>
-                <input type="text" id="press-input-title" placeholder="例如：2026台灣國際淨零永續展" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-taitra-500 focus:outline-none">
-            </div>
-            <div>
-                <label class="block font-medium text-slate-700 mb-1">比對關鍵字 (逗號分隔) *</label>
-                <input type="text" id="press-input-keywords" placeholder="例如：淨零永續, 智慧能源, 展覽, 綠能" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-taitra-500 focus:outline-none">
-                <p class="text-[11px] text-slate-400 mt-1">標題只要包含這些關鍵字即判定由該新聞稿促成</p>
-            </div>
-            <div>
-                <label class="block font-medium text-slate-700 mb-1">備註說明</label>
-                <input type="text" id="press-input-note" placeholder="例如：主辦展覽 / 公關組發布" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-taitra-500 focus:outline-none">
-            </div>
-        </div>
-        <div class="bg-slate-50 px-5 py-3 border-t border-slate-200 flex justify-end space-x-2">
-            <button onclick="closeModal('modal-press')" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-100">取消</button>
-            <button onclick="savePressRelease()" class="px-4 py-2 bg-taitra-500 text-white rounded-lg text-xs font-medium hover:bg-taitra-600">儲存新聞稿</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Add Reporter Mapping -->
-<div id="modal-reporter" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full overflow-hidden">
-        <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex justify-between items-center">
-            <h3 class="font-bold text-slate-800 text-sm">新增/修改 記者媒體對照</h3>
-            <button onclick="closeModal('modal-reporter')" class="text-slate-400 hover:text-slate-600">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div class="p-5 space-y-4 text-xs">
-            <div>
-                <label class="block font-medium text-slate-700 mb-1">媒體名稱 *</label>
-                <input type="text" id="reporter-input-media" placeholder="例如：工商時報" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-taitra-500 focus:outline-none">
-            </div>
-            <div>
-                <label class="block font-medium text-slate-700 mb-1">記者姓名 (多位可用逗號隔開) *</label>
-                <input type="text" id="reporter-input-name" placeholder="例如：李麗滿, 沈美幸" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-taitra-500 focus:outline-none">
-            </div>
-        </div>
-        <div class="bg-slate-50 px-5 py-3 border-t border-slate-200 flex justify-end space-x-2">
-            <button onclick="closeModal('modal-reporter')" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-100">取消</button>
-            <button onclick="saveReporterMapping()" class="px-4 py-2 bg-taitra-500 text-white rounded-lg text-xs font-medium hover:bg-taitra-600">儲存對照</button>
-        </div>
-    </div>
-</div>
-
-<footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-    中華民國對外貿易發展協會 (TAITRA) 公關組 版權所有 • 新聞效益大數據辨識模組
-</footer>
-
-<!-- JavaScript Application Logic -->
-<script>
-    const DEFAULT_PRESS_RELEASES = [
-        { id: 1, date: "2026-10-01", title: "2026台灣國際淨零永續展與智慧能源週", keywords: ["淨零永續", "智慧能源", "綠能", "永續展", "能源週"], note: "10月重大展覽發稿" },
-        { id: 2, date: "2026-10-02", title: "新加坡科技週 TAITRA 臺灣館", keywords: ["新加坡科技", "新加坡", "科技週", "北市12家企業"], note: "海外參展發稿" },
-        { id: 3, date: "2026-10-04", title: "防衛新局論壇", keywords: ["防衛新局", "國防產業", "防衛"], note: "論壇活動發稿" },
-        { id: 4, date: "2026-10-05", title: "360° MOBILITY 智慧移動展", keywords: ["360° MOBILITY", "MOBILITY", "智慧移動", "車聯網"], note: "展覽發稿" },
-        { id: 5, date: "2026-10-06", title: "台灣國際水週 (TIWW)", keywords: ["水週", "國際水週", "水利", "水資源"], note: "水展發稿" },
-        { id: 6, date: "2026-10-08", title: "Medical Japan 日本醫療展 台灣館", keywords: ["Medical Japan", "日本醫療", "醫療展"], note: "日本參展發稿" },
-        { id: 7, date: "2026-10-15", title: "CEATEC 台灣精品館", keywords: ["CEATEC", "台灣精品", "日本電子展"], note: "日本CEATEC發稿" },
-        { id: 8, date: "2026-10-21", title: "台北國際電子產業科技展 (TAITRONICS)", keywords: ["電子展", "TAITRONICS", "AIoT"], note: "重點大展發稿" },
-        { id: 9, date: "2026-10-23", title: "高雄國際食品展", keywords: ["高雄食品展", "高雄國際食品", "食品展"], note: "地方大展發稿" },
-        { id: 10, date: "2026-10-28", title: "TaiSPO 台灣國際運動及健身展", keywords: ["TaiSPO", "運動展", "健身展"], note: "體育產業發稿" }
-    ];
-
-    const DEFAULT_REPORTER_MAPPING = {
-        "中國時報": ["王玉樹"],
-        "工商時報": ["李麗滿", "沈美幸"],
-        "自由時報": ["林菁樺"],
-        "聯合報": ["陳儷方"],
-        "中央社": ["曾筠庭"],
-        "鉅亨網": ["黃皓宸"],
-        "經濟日報": ["黃淑惠", "邱馨儀"],
-        "ETtoday東森新聞雲": ["張佩芬"],
-        "中央廣播電台": ["謝佳興"],
-        "風傳媒 新新聞": ["馮建棨"],
-        "三立新聞網": ["師瑞德"],
-        "TVBS新聞網": ["謝佩穎"],
-        "NOWnews": ["鍾泓良"],
-        "今周刊": ["鄭鴻達"],
-        "yahoo財經": ["許如鎧"]
-    };
-
-    const BLACKLIST_PLATFORMS = [
-        "PCHOMEnews", "PCHOME", "Yam蕃薯藤", "蕃薯藤", "yamNews", "MSNnews", "MSN", 
-        "Yahoo", "Yahoo奇摩新聞", "Yahoo奇摩股市", "PChome股市", "Line Today", "新浪新聞", "翻爆"
-    ];
-
-    let newsData = [];
-    let pressReleases = [];
-    let reporterMap = {};
-    let natureChartObj = null;
-    let mediaChartObj = null;
-
-    window.onload = function() {
-        loadFromLocalStorage();
-        renderPressReleasesTable();
-        renderReporterCards();
-        renderDashboard();
-        setupDropzone();
-    };
-
-    function loadFromLocalStorage() {
-        const savedPress = localStorage.getItem('taitra_press_releases');
-        pressReleases = savedPress ? JSON.parse(savedPress) : [...DEFAULT_PRESS_RELEASES];
-
-        const savedReporters = localStorage.getItem('taitra_reporter_map');
-        reporterMap = savedReporters ? JSON.parse(savedReporters) : {...DEFAULT_REPORTER_MAPPING};
-
-        const savedNews = localStorage.getItem('taitra_news_data');
-        newsData = savedNews ? JSON.parse(savedNews) : [];
-    }
-
-    function saveToLocalStorage() {
-        localStorage.setItem('taitra_press_releases', JSON.stringify(pressReleases));
-        localStorage.setItem('taitra_reporter_map', JSON.stringify(reporterMap));
-        localStorage.setItem('taitra_news_data', JSON.stringify(newsData));
-    }
-
-    function resetAllData() {
-        if (confirm("確定要清空已匯入的所有新聞資料並恢復系統預設值嗎？此動作無法撤銷。")) {
-            localStorage.removeItem('taitra_news_data');
-            localStorage.removeItem('taitra_press_releases');
-            localStorage.removeItem('taitra_reporter_map');
-            loadFromLocalStorage();
-            renderPressReleasesTable();
-            renderReporterCards();
-            renderDashboard();
-            showToast("系統資料已成功重置", "info");
-        }
-    }
-
-    function switchTab(tabId) {
-        const tabs = ['dashboard', 'import', 'press', 'reporters'];
-        tabs.forEach(t => {
-            document.getElementById(`tab-${t}`).classList.add('hidden');
-            document.getElementById(`tab-btn-${t}`).classList.remove('tab-active');
-        });
-        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-        document.getElementById(`tab-btn-${tabId}`).classList.add('tab-active');
-
-        if (tabId === 'dashboard') {
-            renderDashboard();
-        }
-    }
-
-    function analyzeNewsItem(item, processedTitlesMap) {
-        const title = (item['訊息標題'] || item['新聞標題'] || item['標題'] || '').trim();
-        const media = (item['媒體名稱'] || item['媒體'] || item['出處'] || '').trim();
-        const reporter = (item['記者'] || item['撰稿人'] || '').trim();
-        const date = item['監測日期'] || item['日期'] || '';
-
-        let isPromoted = false;
-        let nature = "非新聞稿促成";
-        let remark = "一般自發性性報導/非本會新聞稿事件";
-
-        if (!title) {
-            return { ...item, isPromoted: "否", nature: "無效資料", remark: "缺乏標題" };
-        }
-
-        let matchedPress = null;
-        for (let press of pressReleases) {
-            const titleMatch = press.keywords.some(kw => title.toLowerCase().includes(kw.toLowerCase()));
-            if (titleMatch || reporter.includes("中華民國對外貿易發展協會")) {
-                isPromoted = true;
-                matchedPress = press;
-                break;
-            }
-        }
-
-        if (isPromoted) {
-            const isBlacklisted = BLACKLIST_PLATFORMS.some(platform => 
-                media.toLowerCase().includes(platform.toLowerCase())
-            );
-
-            if (isBlacklisted) {
-                nature = "轉載報導";
-                remark = `平台轉載（${media}）`;
-            } else {
-                let isCrossMediaReprint = false;
-                let originalMediaOwner = "";
-
-                for (let [origMedia, reporters] of Object.entries(reporterMap)) {
-                    if (origMedia !== media) {
-                        for (let rep of reporters) {
-                            if (reporter.includes(rep) || reporter.includes(origMedia.replace("報", "").replace("新聞網", ""))) {
-                                isCrossMediaReprint = true;
-                                originalMediaOwner = origMedia;
-                                break;
-                            }
-                        }
-                    }
-                    if (isCrossMediaReprint) break;
-                }
-
-                if (isCrossMediaReprint) {
-                    nature = "轉載報導";
-                    remark = `跨媒體轉載（內文署名屬 ${originalMediaOwner} 記者）`;
-                } else {
-                    const cleanTitle = title.replace(/[^\w\u4e00-\u9fa5]/g, '');
-                    
-                    if (processedTitlesMap.has(cleanTitle)) {
-                        const firstSeenMedia = processedTitlesMap.get(cleanTitle);
-                        if (firstSeenMedia === media) {
-                            nature = "原生報導";
-                            remark = `原生報導（${media} 同媒體報導）`;
-                        } else {
-                            nature = "轉載報導";
-                            remark = `同篇轉載（首發於 ${firstSeenMedia}）`;
-                        }
-                    } else {
-                        nature = "原生報導";
-                        remark = `原生報導（首發/原創採訪 - ${matchedPress ? matchedPress.title : ''}）`;
-                        processedTitlesMap.set(cleanTitle, media);
-                    }
-                }
-            }
-        }
-
-        return {
-            ...item,
-            '監測日期': date,
-            '媒體名稱': media,
-            '訊息標題': title,
-            '記者': reporter,
-            '是否由新聞稿促成': isPromoted ? "是" : "否",
-            '報導性質': nature,
-            '備註說明': remark
-        };
-    }
-
-    function setupDropzone() {
-        const dropzone = document.getElementById('dropzone');
-        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-taitra-500', 'bg-taitra-100/50'); });
-        dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); dropzone.classList.remove('border-taitra-500', 'bg-taitra-100/50'); });
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropzone.classList.remove('border-taitra-500', 'bg-taitra-100/50');
-            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-        });
-    }
-
-    function handleFileSelect(e) {
-        if (e.target.files.length) handleFile(e.target.files[0]);
-    }
-
-    function handleFile(file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const rawJson = XLSX.utils.sheet_to_json(worksheet);
-
-                if (!rawJson || rawJson.length === 0) {
-                    showToast("上傳的檔案中沒有可用的新聞資料！", "error");
-                    return;
-                }
-
-                processImportedData(rawJson);
-
-            } catch (err) {
-                console.error(err);
-                showToast("檔案讀取失敗，請確認檔案格式是否正確！", "error");
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
-    function processImportedData(rawItems) {
-        let addedCount = 0;
-        let duplicateCount = 0;
-
-        const existingKeys = new Set(newsData.map(item => 
-            `${(item['訊息標題']||'').trim()}_${(item['媒體名稱']||'').trim()}_${(item['監測日期']||'').trim()}`
-        ));
-
-        const processedTitlesMap = new Map();
-        newsData.forEach(item => {
-            if (item['報導性質'] === "原生報導") {
-                const cleanTitle = (item['訊息標題']||'').replace(/[^\w\u4e00-\u9fa5]/g, '');
-                processedTitlesMap.set(cleanTitle, item['媒體名稱']);
-            }
-        });
-
-        const newAnalyzedItems = [];
-
-        rawItems.forEach(rawItem => {
-            const title = (rawItem['訊息標題'] || rawItem['新聞標題'] || rawItem['標題'] || '').trim();
-            const media = (rawItem['媒體名稱'] || rawItem['媒體'] || rawItem['出處'] || '').trim();
-            const date = rawItem['監測日期'] || rawItem['日期'] || '';
-
-            if (!title) return;
-
-            const uniqueKey = `${title}_${media}_${date}`;
-
-            if (existingKeys.has(uniqueKey)) {
-                duplicateCount++;
-            } else {
-                existingKeys.add(uniqueKey);
-                const analyzed = analyzeNewsItem(rawItem, processedTitlesMap);
-                newAnalyzedItems.push(analyzed);
-                addedCount++;
-            }
-        });
-
-        if (addedCount > 0) {
-            newsData = [...newsData, ...newAnalyzedItems];
-            saveToLocalStorage();
-            renderDashboard();
-            switchTab('dashboard');
-            showToast(`成功匯入 ${addedCount} 則新新聞！(已自動排除 ${duplicateCount} 則重複新聞)`, "success");
-        } else {
-            showToast(`未匯入任何新新聞，上傳的 ${duplicateCount} 則新聞皆已存在於系統中。`, "warning");
-        }
-    }
-
-    function renderDashboard() {
-        document.getElementById('total-news-count').innerText = newsData.length;
-        document.getElementById('kpi-total').innerText = newsData.length;
-
-        const promotedList = newsData.filter(d => d['是否由新聞稿促成'] === "是");
-        const originalList = newsData.filter(d => d['報導性質'] === "原生報導");
-        const syndicatedList = newsData.filter(d => d['報導性質'] === "轉載報導");
-
-        document.getElementById('kpi-promoted').innerText = promotedList.length;
-        document.getElementById('kpi-original').innerText = originalList.length;
-        document.getElementById('kpi-syndicated').innerText = syndicatedList.length;
-
-        const promotedPct = newsData.length > 0 ? ((promotedList.length / newsData.length) * 100).toFixed(1) : 0;
-        document.getElementById('kpi-promoted-pct').innerText = `佔比 ${promotedPct}%`;
-
-        renderCharts(originalList.length, syndicatedList.length, newsData.length - promotedList.length, originalList);
-        applyFilters();
-    }
-
-    function renderCharts(originalCount, syndicatedCount, nonPromotedCount, originalList) {
-        const ctxPie = document.getElementById('natureChart').getContext('2d');
-        if (natureChartObj) natureChartObj.destroy();
-
-        natureChartObj = new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: ['原生報導', '轉載報導', '非新聞稿促成'],
-                datasets: [{
-                    data: [originalCount, syndicatedCount, nonPromotedCount],
-                    backgroundColor: ['#10b981', '#f59e0b', '#cbd5e1'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
-                cutout: '70%'
-            }
-        });
-
-        const mediaCounts = {};
-        originalList.forEach(item => {
-            const m = item['媒體名稱'] || '未知媒體';
-            mediaCounts[m] = (mediaCounts[m] || 0) + 1;
-        });
-
-        const sortedMedia = Object.entries(mediaCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 8);
-
-        const ctxBar = document.getElementById('mediaChart').getContext('2d');
-        if (mediaChartObj) mediaChartObj.destroy();
-
-        mediaChartObj = new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: sortedMedia.map(m => m[0]),
-                datasets: [{
-                    label: '原生報導則數',
-                    data: sortedMedia.map(m => m[1]),
-                    backgroundColor: '#0066cc',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } },
-                    x: { ticks: { font: { size: 10 } } }
-                }
-            }
-        });
-    }
-
-    function applyFilters() {
-        const filterPromoted = document.getElementById('filter-promoted').value;
-        const filterNature = document.getElementById('filter-nature').value;
-        const searchText = document.getElementById('filter-search').value.toLowerCase().trim();
-
-        const filtered = newsData.filter(item => {
-            if (filterPromoted !== 'ALL' && item['是否由新聞稿促成'] !== (filterPromoted === 'YES' ? '是' : '否')) return false;
-            if (filterNature !== 'ALL' && item['報導性質'] !== filterNature) return false;
-            if (searchText) {
-                const title = (item['訊息標題'] || '').toLowerCase();
-                const media = (item['媒體名稱'] || '').toLowerCase();
-                const reporter = (item['記者'] || '').toLowerCase();
-                if (!title.includes(searchText) && !media.includes(searchText) && !reporter.includes(searchText)) return false;
-            }
-            return true;
-        });
-
-        document.getElementById('filtered-count').innerText = `共 ${filtered.length} 筆`;
-        renderTableBody(filtered);
-    }
-
-    function renderTableBody(items) {
-        const tbody = document.getElementById('news-table-body');
-        if (items.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center py-12 text-slate-400">
-                        <i class="fa-solid fa-magnifying-glass text-3xl mb-2 block"></i>
-                        找不到符合條件的新聞資料
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        tbody.innerHTML = items.map((item, idx) => {
-            const isOriginal = item['報導性質'] === '原生報導';
-            const isSyndicated = item['報導性質'] === '轉載報導';
-            
-            let badgeClass = "bg-slate-100 text-slate-600 border-slate-200";
-            if (isOriginal) badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold";
-            if (isSyndicated) badgeClass = "bg-amber-100 text-amber-800 border-amber-300";
-
-            const rowBg = isOriginal ? "bg-emerald-50/30 hover:bg-emerald-50/60" : "hover:bg-slate-50/80";
-
-            return `
-                <tr class="${rowBg} transition border-b border-slate-100">
-                    <td class="p-3 text-center text-slate-400 font-mono">${idx + 1}</td>
-                    <td class="p-3 whitespace-nowrap text-slate-600 font-mono">${item['監測日期'] || '-'}</td>
-                    <td class="p-3 font-medium text-slate-800">${item['媒體名稱'] || '-'}</td>
-                    <td class="p-3 text-slate-800 leading-snug">${item['訊息標題'] || '-'}</td>
-                    <td class="p-3 text-slate-600">${item['記者'] || '-'}</td>
-                    <td class="p-3 text-center">
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${item['是否由新聞稿促成'] === '是' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-500'}">
-                            ${item['是否由新聞稿促成'] || '否'}
-                        </span>
-                    </td>
-                    <td class="p-3 text-center">
-                        <span class="px-2 py-0.5 rounded-full text-[11px] border ${badgeClass}">
-                            ${item['報導性質'] || '未辨識'}
-                        </span>
-                    </td>
-                    <td class="p-3 text-slate-500 text-[11px]">${item['備註說明'] || '-'}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    function exportToExcel() {
-        if (newsData.length === 0) {
-            showToast("目前沒有可匯出的新聞資料！", "warning");
-            return;
-        }
-
-        const exportData = newsData.map((item, index) => ({
-            "序號": index + 1,
-            "監測日期": item['監測日期'] || '',
-            "媒體名稱": item['媒體名稱'] || '',
-            "訊息標題": item['訊息標題'] || '',
-            "記者": item['記者'] || '',
-            "是否由新聞稿促成": item['是否由新聞稿促成'] || '',
-            "報導性質": item['報導性質'] || '',
-            "備註說明": item['備註說明'] || ''
-        }));
-
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "新聞分析與原生報導判讀");
-
-        const max_width = exportData.reduce((w, r) => {
-            return Object.keys(r).map((key, i) => {
-                const value = r[key] ? r[key].toString() : '';
-                return Math.max(w[i] || 10, value.length * 2);
-            });
-        }, []);
-        worksheet['!cols'] = max_width.map(w => ({ wch: Math.min(w, 50) }));
-
-        const dateStr = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(workbook, `TAITRA_新聞原生與轉載分析報告_${dateStr}.xlsx`);
-        showToast("已成功匯出 Excel 報告檔案！", "success");
-    }
-
-    function renderPressReleasesTable() {
-        document.getElementById('press-count').innerText = pressReleases.length;
-        const tbody = document.getElementById('press-table-body');
-        tbody.innerHTML = pressReleases.map((p, idx) => `
-            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                <td class="p-3 text-center text-slate-400 font-mono">${idx + 1}</td>
-                <td class="p-3 font-mono text-slate-600">${p.date}</td>
-                <td class="p-3 font-semibold text-slate-800">${p.title}</td>
-                <td class="p-3">
-                    <div class="flex flex-wrap gap-1">
-                        ${p.keywords.map(k => `<span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[11px] border border-blue-200">${k}</span>`).join('')}
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAITRA 外貿協會 - 新聞監測分析與原生報導辨識系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (xlsx) for client-side Excel parse & export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 p-2 rounded-lg">
+                        <i data-lucide="newspaper" class="w-6 h-6 text-white"></i>
                     </div>
-                </td>
-                <td class="p-3 text-slate-500">${p.note || '-'}</td>
-                <td class="p-3 text-center">
-                    <button onclick="deletePressRelease(${p.id})" class="text-red-500 hover:text-red-700">
-                        <i class="fa-solid fa-trash"></i>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-wide">TAITRA 外貿協會公關組</h1>
+                        <p class="text-xs text-blue-200">新聞監測分析與原生報導辨識系統</p>
+                    </div>
+                </div>
+
+                <nav class="flex space-x-1 sm:space-x-2">
+                    <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 bg-blue-600 text-white shadow">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                        <span>分析儀表板</span>
                     </button>
-                </td>
-            </tr>
-        `).join('');
-    }
+                    <button onclick="switchTab('import')" id="tab-btn-import" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                        <span>匯入與收錄資料</span>
+                    </button>
+                    <button onclick="switchTab('press')" id="tab-btn-press" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>新聞稿資料庫</span>
+                    </button>
+                    <button onclick="switchTab('reporters')" id="tab-btn-reporters" class="px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <span>記者對照表</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
 
-    function openAddPressModal() {
-        document.getElementById('press-input-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('press-input-title').value = '';
-        document.getElementById('press-input-keywords').value = '';
-        document.getElementById('press-input-note').value = '';
-        document.getElementById('modal-press').classList.remove('hidden');
-    }
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-    function savePressRelease() {
-        const date = document.getElementById('press-input-date').value;
-        const title = document.getElementById('press-input-title').value.trim();
-        const keywordsStr = document.getElementById('press-input-keywords').value.trim();
-        const note = document.getElementById('press-input-note').value.trim();
+        <!-- Notification Toast -->
+        <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 border border-slate-700 transition-all duration-300">
+            <div id="toast-icon" class="text-emerald-400"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+            <div id="toast-message" class="text-sm font-medium">通知訊息內容</div>
+        </div>
 
-        if (!title || !keywordsStr) {
-            alert("請填寫活動名稱與比對關鍵字！");
-            return;
-        }
+        <!-- ==================== TAB 1: ANALYTICS DASHBOARD ==================== -->
+        <section id="tab-dashboard" class="space-y-6">
+            <!-- KPI Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">新聞監測總筆數</p>
+                        <h3 id="stat-total" class="text-3xl font-extrabold text-slate-800 mt-1">0</h3>
+                        <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                            <span class="text-slate-400">系統累積已收錄筆數</span>
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center">
+                        <i data-lucide="database" class="w-6 h-6"></i>
+                    </div>
+                </div>
 
-        const keywords = keywordsStr.split(/[,，]/).map(k => k.trim()).filter(k => k);
-        const newPress = { id: Date.now(), date, title, keywords, note };
-        pressReleases.push(newPress);
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">新聞稿促成 (總計)</p>
+                        <h3 id="stat-pr-total" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+                        <p id="stat-pr-rate" class="text-xs text-emerald-600 font-medium mt-1">佔比 0%</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                        <i data-lucide="sparkles" class="w-6 h-6"></i>
+                    </div>
+                </div>
 
-        saveToLocalStorage();
-        renderPressReleasesTable();
-        closeModal('modal-press');
-        showToast(`已追加新聞稿：「${title}」`, "success");
-        
-        if (newsData.length > 0) reAnalyzeAllNews();
-    }
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-emerald-200 bg-gradient-to-br from-emerald-50/40 to-white flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">★ 原生報導 (KPI目標)</p>
+                        <h3 id="stat-native" class="text-3xl font-extrabold text-emerald-700 mt-1">0</h3>
+                        <p id="stat-native-sub" class="text-xs text-emerald-600 font-medium mt-1">獨立記者/首發報導</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
+                        <i data-lucide="award" class="w-6 h-6"></i>
+                    </div>
+                </div>
 
-    function deletePressRelease(id) {
-        if (confirm("確定要刪除這筆新聞稿對照記錄嗎？")) {
-            pressReleases = pressReleases.filter(p => p.id !== id);
-            saveToLocalStorage();
-            renderPressReleasesTable();
-            showToast("已刪除該筆新聞稿", "info");
-            if (newsData.length > 0) reAnalyzeAllNews();
-        }
-    }
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-amber-600 uppercase tracking-wider">轉載報導 (平台/跨媒)</p>
+                        <h3 id="stat-reprint" class="text-3xl font-extrabold text-amber-600 mt-1">0</h3>
+                        <p class="text-xs text-slate-400 mt-1">已剔除，不重複採計</p>
+                    </div>
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+                        <i data-lucide="copy" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
 
-    function renderReporterCards() {
-        const container = document.getElementById('reporter-cards-container');
-        container.innerHTML = Object.entries(reporterMap).map(([media, reporters]) => `
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-slate-800 text-sm flex items-center">
-                            <i class="fa-solid fa-building-newsletter text-taitra-500 mr-2"></i>${media}
-                        </h4>
-                        <button onclick="deleteReporterMapping('${media}')" class="text-slate-400 hover:text-red-500 text-xs">
-                            <i class="fa-solid fa-trash"></i>
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-blue-600"></i>
+                            新聞稿促成與原生報導比例
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">自動辨識平台轉載（PChome、蕃薯藤）與跨媒體轉載</p>
+                    </div>
+                    <div class="relative my-4 flex items-center justify-center h-56">
+                        <canvas id="chart-pie"></canvas>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-600"></i>
+                            原生報導前 8 大主要發布媒體
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">僅統計「原生報導」，展現各主力合作媒體的實際露出的質量</p>
+                    </div>
+                    <div class="relative my-4 h-56">
+                        <canvas id="chart-media-bar"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- News Data Table Area -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col">
+                <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i data-lucide="table" class="w-4 h-4 text-blue-600"></i>
+                            已監測新聞明細表
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">點擊各欄位可進行篩選與搜尋，亮綠色底色代表【原生報導】</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <!-- Search input -->
+                        <div class="relative flex-1 sm:w-64">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                            <input type="text" id="table-search" oninput="renderTable()" placeholder="搜尋標題、媒體、記者..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Filter dropdown -->
+                        <select id="table-filter-type" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">全部報導 (含轉載與非促成)</option>
+                            <option value="NATIVE" selected>★ 僅看原生報導 (KPI必看)</option>
+                            <option value="PR_ALL">新聞稿促成 (原生+轉載)</option>
+                            <option value="REPRINT">僅看轉載報導</option>
+                        </select>
+
+                        <!-- Export Button -->
+                        <button onclick="exportToExcel()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                            <span>匯出 Excel 報告</span>
                         </button>
                     </div>
-                    <div class="flex flex-wrap gap-1.5 mt-2">
-                        ${reporters.map(r => `<span class="bg-white px-2.5 py-1 rounded-md text-xs font-medium border border-slate-200 text-slate-700 shadow-sm"><i class="fa-solid fa-user-pen text-slate-400 mr-1"></i>${r}</span>`).join('')}
-                    </div>
+                </div>
+
+                <!-- Table Content -->
+                <div class="overflow-x-auto custom-scrollbar max-h-[500px]">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-100/80 sticky top-0 z-10 text-slate-600 font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="p-3 w-12 text-center">序號</th>
+                                <th class="p-3 w-24">日期</th>
+                                <th class="p-3 w-28">媒體名稱</th>
+                                <th class="p-3">訊息標題</th>
+                                <th class="p-3 w-28">記者</th>
+                                <th class="p-3 w-28 text-center">是否由新聞稿促成</th>
+                                <th class="p-3 w-28 text-center">報導性質</th>
+                                <th class="p-3 w-48">備註說明與原生歸屬</th>
+                            </tr>
+                        </thead>
+                        <tbody id="news-table-body" class="divide-y divide-slate-100">
+                            <!-- JS dynamic rendering -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
+                    <span id="table-count-info">顯示 0 / 0 則</span>
+                    <button onclick="clearAllNews()" class="text-red-500 hover:text-red-700 hover:underline flex items-center gap-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span>清空目前收錄新聞資料</span>
+                    </button>
                 </div>
             </div>
-        `).join('');
-    }
+        </section>
 
-    function openAddReporterModal() {
-        document.getElementById('reporter-input-media').value = '';
-        document.getElementById('reporter-input-name').value = '';
-        document.getElementById('modal-reporter').classList.remove('hidden');
-    }
+        <!-- ==================== TAB 2: IMPORT DATA ==================== -->
+        <section id="tab-import" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 max-w-3xl mx-auto">
+                <div class="text-center max-w-lg mx-auto">
+                    <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                        <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800">匯入監測 Excel / CSV 檔案</h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        上傳包含新聞監測紀錄的試算表。系統將會<strong class="text-blue-600">自動排查重複新聞</strong>，並即時比對本會新聞稿庫與記者資料庫。
+                    </p>
+                </div>
 
-    function saveReporterMapping() {
-        const media = document.getElementById('reporter-input-media').value.trim();
-        const namesStr = document.getElementById('reporter-input-name').value.trim();
+                <!-- Dropzone Area -->
+                <div id="dropzone" onclick="document.getElementById('file-input').click()" class="mt-6 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/50 hover:bg-blue-50/30 rounded-2xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center group">
+                    <input type="file" id="file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileSelect(event)">
+                    <i data-lucide="file-spreadsheet" class="w-12 h-12 text-slate-400 group-hover:text-blue-500 transition mb-2"></i>
+                    <p class="text-sm font-semibold text-slate-700 group-hover:text-blue-600">拖曳 Excel / CSV 檔案至此處，或點擊選擇檔案</p>
+                    <p class="text-xs text-slate-400 mt-1">支援 .xlsx, .xls, .csv 檔案格式</p>
+                </div>
 
-        if (!media || !namesStr) {
-            alert("請填寫媒體名稱與記者姓名！");
-            return;
+                <!-- Guidance & Instructions -->
+                <div class="mt-6 bg-slate-50 rounded-xl p-4 border border-slate-200 text-xs text-slate-600 space-y-2">
+                    <p class="font-bold text-slate-700 flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
+                        欄位需求與建議：
+                    </p>
+                    <ul class="list-disc list-inside space-y-1 text-slate-500">
+                        <li>試算表需包含欄位：<strong>標題（訊息標題）、媒體名稱、監測日期/日期、記者</strong>。</li>
+                        <li>系統會依據 <strong>「標題 + 媒體 + 發布日期」</strong> 自動排查，重複的資料將不會被重複計算。</li>
+                        <li>自動剔除 PChome、Yam蕃薯藤、MSN、Yahoo 等廣播平台轉載報導。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: PRESS RELEASES DATABASE ==================== -->
+        <section id="tab-press" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-5 h-5 text-blue-600"></i>
+                        本會發布新聞稿資料庫
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">系統將根據以下新聞稿活動主題與關鍵字，比對監測報導是否由本會促成。</p>
+                </div>
+
+                <button onclick="openAddPressModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>追加本會新聞稿</span>
+                </button>
+            </div>
+
+            <!-- Press releases Grid -->
+            <div id="press-list-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamic cards -->
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: REPORTERS DIRECTORY ==================== -->
+        <section id="tab-reporters" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+                        合作記者與主要媒體對照表
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">用於辨識跨媒體轉載（例如：工商時報刊登但標示為中國時報記者王玉樹之文章）。</p>
+                </div>
+
+                <button onclick="openAddReporterModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    <span>新增記者對照</span>
+                </button>
+            </div>
+
+            <!-- Reporters Grid -->
+            <div id="reporters-list-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <!-- Dynamic cards -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal 1: Add Press Release -->
+    <div id="modal-press" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base">追加本會發布新聞稿</h3>
+                <button onclick="closeModal('modal-press')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">新聞稿活動/主題名稱 *</label>
+                    <input type="text" id="input-pr-title" placeholder="例如：2026年「高雄國際食品展」盛大開幕" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">實際發稿日期 (選填)</label>
+                    <input type="date" id="input-pr-date" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">關鍵字 (以逗號分隔) *</label>
+                    <input type="text" id="input-pr-keywords" placeholder="高雄食品展, 飯店餐飲展, 遠洋鮮味" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-[10px] text-slate-400 mt-1">標題包含任一關鍵字的新聞，將會被判定為由本新聞稿促成。</p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button onclick="closeModal('modal-press')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold">取消</button>
+                <button onclick="savePressRelease()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow">儲存並重新比對</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Add Reporter -->
+    <div id="modal-reporter" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base">新增記者與媒體對照</h3>
+                <button onclick="closeModal('modal-reporter')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">記者姓名 *</label>
+                    <input type="text" id="input-rep-name" placeholder="例如：張佩芬" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">所屬主力媒體 *</label>
+                    <input type="text" id="input-rep-media" placeholder="例如：ETtoday東森新聞雲" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button onclick="closeModal('modal-reporter')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold">取消</button>
+                <button onclick="saveReporter()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Javascript Logic -->
+    <script>
+        // ==================== STATE MANAGEMENT ====================
+        const DEFAULT_REPORTERS = {
+            '王玉樹': '中國時報',
+            '李麗滿': '工商時報',
+            '沈美幸': '工商時報',
+            '林菁樺': '自由時報',
+            '陳儷方': '聯合報',
+            '曾筠庭': '中央社',
+            '黃皓宸': '鉅亨網',
+            '黃淑惠': '經濟日報',
+            '邱馨儀': '經濟日報',
+            '張佩芬': 'ETtoday東森新聞雲',
+            '謝佳興': '中央廣播電台',
+            '馮建棨': '風傳媒',
+            '師瑞德': '三立新聞網',
+            '謝佩穎': 'TVBS新聞網',
+            '鍾泓良': 'NOWnews',
+            '鄭鴻達': '今周刊',
+            '許如鎧': 'yahoo財經'
+        };
+
+        const SYNDICATE_PLATFORMS = new Set([
+            'PCHOMEnews', 'Yam蕃薯藤', 'MSNnews', 'Yahoo', 'Yahoo奇摩股市', 
+            'PChome股市', 'Line Today', '新浪新聞', '翻爆'
+        ]);
+
+        const DEFAULT_PRESS_RELEASES = [
+            { id: 1, title: '2026年新加坡科技週台北主題館 新聞稿', date: '2026-10-02', keywords: ['新加坡科技週', '新加坡科技周'] },
+            { id: 2, title: '淨零永續展與智慧能源週 (開幕/展前/閉幕)', date: '2026-10-14', keywords: ['淨零永續展', '智慧能源週', '永續展'] },
+            { id: 3, title: '2026全球防衛新局：航太暨國防產業戰略論壇', date: '2026-10-07', keywords: ['防衛新局', '航太暨國防', '國防產業', 'Shield AI'] },
+            { id: 4, title: '2027年360° MOBILITY Mega Shows開放徵展報名', date: '2026-10-06', keywords: ['360° MOBILITY', 'Mega Shows', '智慧移動展'] },
+            { id: 5, title: '台灣國際水週與全球水資源永續論壇', date: '2026-10-14', keywords: ['台灣國際水週', '水資源永續', '水週'] },
+            { id: 6, title: 'Medical Japan 產業發表會', date: '2026-10-08', keywords: ['Medical Japan', '東京醫療展'] },
+            { id: 7, title: '日本 CEATEC 台灣精品展示區暨發表會', date: '2026-10-13', keywords: ['CEATEC', '台灣精品'] },
+            { id: 8, title: '2026 台灣國際電子展 (開幕/閉幕/預告)', date: '2026-10-20', keywords: ['電子展', '電子展開幕'] },
+            { id: 9, title: '2026年「高雄國際食品展」盛大開幕', date: '2026-10-22', keywords: ['高雄國際食品展', '高雄食品展', '高雄國際飯店'] },
+            { id: 10, title: '2026 台灣國際遊艇展', date: '2026-11-03', keywords: ['遊艇展', '國際遊艇展'] },
+            { id: 11, title: '2026 SEMA 展覽發稿', date: '2026-11-05', keywords: ['SEMA'] },
+            { id: 12, title: 'TaiSPO 專業培訓與營養修護新聞稿', date: '2026-10-27', keywords: ['TaiSPO'] },
+            { id: 13, title: '2026年美國臺灣形象展盛大登場', date: '2026-10-01', keywords: ['美國臺灣形象展', '美國台灣形象展'] }
+        ];
+
+        let state = {
+            reporters: JSON.parse(localStorage.getItem('taitra_reporters')) || DEFAULT_REPORTERS,
+            pressReleases: JSON.parse(localStorage.getItem('taitra_press_releases')) || DEFAULT_PRESS_RELEASES,
+            newsData: JSON.parse(localStorage.getItem('taitra_news_data')) || []
+        };
+
+        let pieChart = null;
+        let barChart = null;
+
+        // Save state to LocalStorage
+        function saveState() {
+            localStorage.setItem('taitra_reporters', JSON.stringify(state.reporters));
+            localStorage.setItem('taitra_press_releases', JSON.stringify(state.pressReleases));
+            localStorage.setItem('taitra_news_data', JSON.stringify(state.newsData));
         }
 
-        const names = namesStr.split(/[,，]/).map(n => n.trim()).filter(n => n);
-        reporterMap[media] = names;
+        // Initialize icons & views on load
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            reanalyzeAllNews();
+            renderDashboard();
+            renderPressReleases();
+            renderReporters();
+        });
 
-        saveToLocalStorage();
-        renderReporterCards();
-        closeModal('modal-reporter');
-        showToast(`已更新 ${media} 的主力記者對照`, "success");
-
-        if (newsData.length > 0) reAnalyzeAllNews();
-    }
-
-    function deleteReporterMapping(media) {
-        if (confirm(`確定要刪除 ${media} 的記者對照資料嗎？`)) {
-            delete reporterMap[media];
-            saveToLocalStorage();
-            renderReporterCards();
-            showToast(`已刪除 ${media} 之對照`, "info");
-            if (newsData.length > 0) reAnalyzeAllNews();
-        }
-    }
-
-    function reAnalyzeAllNews() {
-        const processedTitlesMap = new Map();
-        newsData = newsData.map(item => analyzeNewsItem(item, processedTitlesMap));
-        saveToLocalStorage();
-        renderDashboard();
-    }
-
-    function closeModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
-    }
-
-    function showToast(message, type = 'info') {
-        const container = document.getElementById('toast-container');
-        const body = document.getElementById('toast-body');
-        const icon = document.getElementById('toast-icon');
-        const title = document.getElementById('toast-title');
-        const msg = document.getElementById('toast-message');
-
-        container.classList.remove('hidden');
-
-        if (type === 'success') {
-            body.className = "p-4 rounded-lg border shadow-sm flex items-start space-x-3 bg-emerald-50 border-emerald-200 text-emerald-900";
-            icon.className = "fa-solid fa-circle-check text-emerald-600 text-lg mt-0.5";
-            title.innerText = "成功";
-        } else if (type === 'warning') {
-            body.className = "p-4 rounded-lg border shadow-sm flex items-start space-x-3 bg-amber-50 border-amber-200 text-amber-900";
-            icon.className = "fa-solid fa-triangle-exclamation text-amber-600 text-lg mt-0.5";
-            title.innerText = "提醒";
-        } else if (type === 'error') {
-            body.className = "p-4 rounded-lg border shadow-sm flex items-start space-x-3 bg-red-50 border-red-200 text-red-900";
-            icon.className = "fa-solid fa-circle-xmark text-red-600 text-lg mt-0.5";
-            title.innerText = "錯誤";
-        } else {
-            body.className = "p-4 rounded-lg border shadow-sm flex items-start space-x-3 bg-blue-50 border-blue-200 text-blue-900";
-            icon.className = "fa-solid fa-circle-info text-blue-600 text-lg mt-0.5";
-            title.innerText = "通知";
+        // Tab Navigation
+        function switchTab(tabName) {
+            ['dashboard', 'import', 'press', 'reporters'].forEach(t => {
+                const sec = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tabName) {
+                    sec.classList.remove('hidden');
+                    btn.className = 'px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 bg-blue-600 text-white shadow';
+                } else {
+                    sec.classList.add('hidden');
+                    btn.className = 'px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1.5 text-slate-300 hover:text-white hover:bg-white/10';
+                }
+            });
+            lucide.createIcons();
+            if (tabName === 'dashboard') {
+                renderDashboard();
+            }
         }
 
-        msg.innerText = message;
-        setTimeout(() => { dismissToast(); }, 5000);
-    }
+        // Toast Notification
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3500);
+        }
 
-    function dismissToast() {
-        document.getElementById('toast-container').classList.add('hidden');
-    }
-</script>
+        // ==================== NATIVE & REPRINT REASONING ENGINE ====================
+        function analyzeItem(item, seenStoriesMap) {
+            const title = (item.title || '').trim();
+            const media = (item.media || '').trim();
+            const reporter = (item.reporter || '').trim();
+
+            // 1. Check PR relatedness
+            let isPr = false;
+            let matchedPrTitle = '';
+
+            for (const pr of state.pressReleases) {
+                if (pr.keywords.some(kw => kw && title.includes(kw))) {
+                    isPr = true;
+                    matchedPrTitle = pr.title;
+                    break;
+                }
+            }
+
+            if (!isPr && (reporter.includes('對外貿易發展協會') || reporter.includes('外貿協會') || title.includes('貿協'))) {
+                isPr = true;
+                matchedPrTitle = '本會活動/新聞稿報導';
+            }
+
+            // Exclude unrelated topics
+            const excludeKws = ['鳳梨釋迦', '駐多倫多辦事處', '中市工策會', '大陸AI電影', '鄧白氏', '德國AMB'];
+            if (excludeKws.some(ex => title.includes(ex))) {
+                isPr = false;
+            }
+
+            if (!isPr) {
+                return {
+                    isPr: '否',
+                    type: '非新聞稿促成',
+                    note: '非本會發稿/活動報導'
+                };
+            }
+
+            // 2. Check Syndicate Platform
+            if (SYNDICATE_PLATFORMS.has(media)) {
+                return {
+                    isPr: '是',
+                    type: '轉載報導',
+                    note: `平台轉載（${media}）`
+                };
+            }
+
+            // 3. Check Cross-Media Reporter Attribution
+            for (const [repName, repTargetMedia] of Object.entries(state.reporters)) {
+                if (reporter.includes(repName)) {
+                    if (!media.includes(repTargetMedia) && !repTargetMedia.includes(media)) {
+                        return {
+                            isPr: '是',
+                            type: '轉載報導',
+                            note: `跨媒體轉載（原作者 ${repName} 屬 ${repTargetMedia}）`
+                        };
+                    }
+                }
+            }
+
+            // 4. Duplicate Story Check (Native vs Reprint)
+            const normTitle = title.replace(/[^\w\u4e00-\u9fff]/g, '');
+            if (seenStoriesMap.has(normTitle)) {
+                const firstMedia = seenStoriesMap.get(normTitle);
+                if (firstMedia === media) {
+                    return {
+                        isPr: '是',
+                        type: '原生報導',
+                        note: '原生報導（同媒體獨立採訪/記者）'
+                    };
+                } else {
+                    return {
+                        isPr: '是',
+                        type: '轉載報導',
+                        note: `轉載報導（首發原生為 ${firstMedia}）`
+                    };
+                }
+            } else {
+                seenStoriesMap.set(normTitle, media);
+                return {
+                    isPr: '是',
+                    type: '原生報導',
+                    note: '原生報導（首發原創）'
+                };
+            }
+        }
+
+        function reanalyzeAllNews() {
+            const seenStoriesMap = new Map();
+            state.newsData.forEach(item => {
+                const res = analyzeItem(item, seenStoriesMap);
+                item.isPr = res.isPr;
+                item.type = res.type;
+                item.note = res.note;
+            });
+            saveState();
+        }
+
+        // ==================== DASHBOARD & TABLE RENDERERS ====================
+        function renderDashboard() {
+            const total = state.newsData.length;
+            const prAll = state.newsData.filter(i => i.isPr === '是');
+            const native = state.newsData.filter(i => i.type === '原生報導');
+            const reprint = state.newsData.filter(i => i.type === '轉載報導');
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-pr-total').innerText = prAll.length;
+            document.getElementById('stat-pr-rate').innerText = `佔比 ${total ? Math.round(prAll.length / total * 100) : 0}%`;
+            document.getElementById('stat-native').innerText = native.length;
+            document.getElementById('stat-reprint').innerText = reprint.length;
+
+            renderCharts(native.length, reprint.length, total - prAll.length, native);
+            renderTable();
+        }
+
+        function renderCharts(nativeCount, reprintCount, nonPrCount, nativeItems) {
+            // Pie Chart
+            const ctxPie = document.getElementById('chart-pie').getContext('2d');
+            if (pieChart) pieChart.destroy();
+            pieChart = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['原生報導 (KPI)', '轉載報導', '非新聞稿報導'],
+                    datasets: [{
+                        data: [nativeCount, reprintCount, nonPrCount],
+                        backgroundColor: ['#059669', '#d97706', '#94a3b8'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Media Bar Chart (Counts of native articles per media)
+            const mediaCounts = {};
+            nativeItems.forEach(i => {
+                const m = i.media || '未知媒體';
+                mediaCounts[m] = (mediaCounts[m] || 0) + 1;
+            });
+            const sortedMedia = Object.entries(mediaCounts).sort((a,b) => b[1] - a[1]).slice(0, 8);
+
+            const ctxBar = document.getElementById('chart-media-bar').getContext('2d');
+            if (barChart) barChart.destroy();
+            barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: sortedMedia.map(m => m[0]),
+                    datasets: [{
+                        label: '原生報導則數',
+                        data: sortedMedia.map(m => m[1]),
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('news-table-body');
+            const searchVal = document.getElementById('table-search').value.toLowerCase().trim();
+            const filterType = document.getElementById('table-filter-type').value;
+
+            let filtered = state.newsData.filter(i => {
+                // Filter dropdown
+                if (filterType === 'NATIVE' && i.type !== '原生報導') return false;
+                if (filterType === 'PR_ALL' && i.isPr !== '是') return false;
+                if (filterType === 'REPRINT' && i.type !== '轉載報導') return false;
+
+                // Search input
+                if (searchVal) {
+                    const matchTitle = (i.title || '').toLowerCase().includes(searchVal);
+                    const matchMedia = (i.media || '').toLowerCase().includes(searchVal);
+                    const matchReporter = (i.reporter || '').toLowerCase().includes(searchVal);
+                    return matchTitle || matchMedia || matchReporter;
+                }
+                return true;
+            });
+
+            tbody.innerHTML = '';
+            filtered.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                const isNative = item.type === '原生報導';
+                
+                tr.className = isNative 
+                    ? 'bg-emerald-50/70 hover:bg-emerald-100/80 transition text-slate-800' 
+                    : 'hover:bg-slate-50 transition text-slate-600';
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center font-medium">${index + 1}</td>
+                    <td class="p-3 whitespace-nowrap">${item.date || '-'}</td>
+                    <td class="p-3 font-semibold whitespace-nowrap">${item.media || '-'}</td>
+                    <td class="p-3 font-medium">${item.title || '-'}</td>
+                    <td class="p-3 whitespace-nowrap">${item.reporter || '-'}</td>
+                    <td class="p-3 text-center font-bold ${item.isPr === '是' ? 'text-emerald-600' : 'text-slate-400'}">${item.isPr}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2 py-1 rounded-md text-[11px] font-bold ${
+                            isNative ? 'bg-emerald-600 text-white shadow-sm' : 
+                            (item.type === '轉載報導' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600')
+                        }">
+                            ${item.type}
+                        </span>
+                    </td>
+                    <td class="p-3 text-slate-500">${item.note || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('table-count-info').innerText = `顯示 ${filtered.length} / ${state.newsData.length} 則新聞`;
+        }
+
+        // ==================== FILE IMPORT & DEDUPLICATION ====================
+        function handleFileSelect(evt) {
+            const file = evt.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Read sheet 0
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                processImportedRows(jsonRows);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processImportedRows(rows) {
+            if (rows.length < 2) {
+                showToast('檔案格式無資料內容', 'error');
+                return;
+            }
+
+            // Find header index
+            let headerIdx = 0;
+            for (let i = 0; i < Math.min(rows.length, 5); i++) {
+                if (rows[i].some(cell => String(cell).includes('標題') || String(cell).includes('媒體'))) {
+                    headerIdx = i;
+                    break;
+                }
+            }
+
+            const headers = rows[headerIdx].map(h => String(h || '').trim());
+            
+            const colTitleIdx = headers.findIndex(h => h.includes('標題'));
+            const colMediaIdx = headers.findIndex(h => h.includes('媒體名稱') || h.includes('媒體'));
+            const colDateIdx = headers.findIndex(h => h.includes('日期'));
+            const colReporterIdx = headers.findIndex(h => h.includes('記者'));
+
+            if (colTitleIdx === -1) {
+                showToast('無法辨識「標題」欄位，請檢查試算表', 'error');
+                return;
+            }
+
+            let newCount = 0;
+            let dupCount = 0;
+
+            // Existing uniqueness set (Title + Media + Date)
+            const existingKeys = new Set(state.newsData.map(i => `${i.title}_${i.media}_${i.date}`));
+
+            for (let i = headerIdx + 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+
+                const title = String(row[colTitleIdx] || '').trim();
+                const media = colMediaIdx !== -1 ? String(row[colMediaIdx] || '').trim() : '未知媒體';
+                let date = colDateIdx !== -1 ? String(row[colDateIdx] || '').trim() : '';
+                const reporter = colReporterIdx !== -1 ? String(row[colReporterIdx] || '').trim() : '';
+
+                if (!title || title === 'undefined') continue;
+
+                // Format date string if excel timestamp
+                if (date.includes('T')) date = date.split('T')[0];
+
+                const key = `${title}_${media}_${date}`;
+                if (existingKeys.has(key)) {
+                    dupCount++;
+                } else {
+                    existingKeys.add(key);
+                    state.newsData.push({
+                        id: Date.now() + Math.random(),
+                        title, media, date, reporter
+                    });
+                    newCount++;
+                }
+            }
+
+            reanalyzeAllNews();
+            showToast(`成功匯入 ${newCount} 則新新聞 (自動排除 ${dupCount} 則重複新聞)`);
+            switchTab('dashboard');
+        }
+
+        // Export back to Excel
+        function exportToExcel() {
+            if (state.newsData.length === 0) {
+                showToast('目前沒有資料可匯出', 'error');
+                return;
+            }
+
+            const exportRows = state.newsData.map((item, idx) => ({
+                '項次': idx + 1,
+                '監測日期': item.date,
+                '媒體名稱': item.media,
+                '訊息標題': item.title,
+                '記者': item.reporter,
+                '是否由新聞稿促成': item.isPr,
+                '報導性質 (原生/轉載)': item.type,
+                '備註說明': item.note
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "原生與轉載新聞分析");
+
+            XLSX.writeFile(workbook, `TAITRA_新聞原生報導分析報告_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showToast('已匯出 Excel 報告檔');
+        }
+
+        function clearAllNews() {
+            if (confirm('確定要清空目前收錄的新聞資料嗎？')) {
+                state.newsData = [];
+                reanalyzeAllNews();
+                renderDashboard();
+                showToast('新聞資料已清空');
+            }
+        }
+
+        // ==================== PRESS RELEASES MANAGEMENT ====================
+        function renderPressReleases() {
+            const grid = document.getElementById('press-list-grid');
+            grid.innerHTML = '';
+
+            state.pressReleases.forEach(pr => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-300 transition';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">${pr.date || '無日期'}</span>
+                            <button onclick="deletePressRelease(${pr.id})" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm mt-2">${pr.title}</h4>
+                        <div class="mt-3 flex flex-wrap gap-1">
+                            ${pr.keywords.map(kw => `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[11px] font-medium"># ${kw}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function openAddPressModal() {
+            document.getElementById('input-pr-title').value = '';
+            document.getElementById('input-pr-date').value = '';
+            document.getElementById('input-pr-keywords').value = '';
+            document.getElementById('modal-press').classList.remove('hidden');
+        }
+
+        function savePressRelease() {
+            const title = document.getElementById('input-pr-title').value.trim();
+            const date = document.getElementById('input-pr-date').value;
+            const kwStr = document.getElementById('input-pr-keywords').value.trim();
+
+            if (!title || !kwStr) {
+                showToast('請填寫新聞稿活動名稱與關鍵字', 'error');
+                return;
+            }
+
+            const keywords = kwStr.split(/[,，]/).map(k => k.trim()).filter(Boolean);
+
+            state.pressReleases.unshift({
+                id: Date.now(),
+                title, date, keywords
+            });
+
+            closeModal('modal-press');
+            reanalyzeAllNews();
+            renderPressReleases();
+            showToast('已追加新聞稿並完成比對');
+        }
+
+        function deletePressRelease(id) {
+            state.pressReleases = state.pressReleases.filter(p => p.id !== id);
+            reanalyzeAllNews();
+            renderPressReleases();
+            showToast('已刪除新聞稿');
+        }
+
+        // ==================== REPORTERS MANAGEMENT ====================
+        function renderReporters() {
+            const grid = document.getElementById('reporters-list-grid');
+            grid.innerHTML = '';
+
+            Object.entries(state.reporters).forEach(([rep, media]) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-blue-300 transition';
+                card.innerHTML = `
+                    <div>
+                        <h5 class="font-bold text-slate-800 text-xs">${rep}</h5>
+                        <p class="text-[11px] text-blue-600 font-medium mt-0.5">${media}</p>
+                    </div>
+                    <button onclick="deleteReporter('${rep}')" class="text-slate-300 hover:text-red-500"><i data-lucide="x-circle" class="w-4 h-4"></i></button>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function openAddReporterModal() {
+            document.getElementById('input-rep-name').value = '';
+            document.getElementById('input-rep-media').value = '';
+            document.getElementById('modal-reporter').classList.remove('hidden');
+        }
+
+        function saveReporter() {
+            const name = document.getElementById('input-rep-name').value.trim();
+            const media = document.getElementById('input-rep-media').value.trim();
+
+            , (!name || !media) {
+                showToast('請填寫記者姓名與所屬媒體', 'error');
+                return;
+            }
+
+            state.reporters[name] = media;
+            closeModal('modal-reporter');
+            reanalyzeAllNews();
+            renderReporters();
+            showToast('已新增記者對照資料');
+        }
+
+        function deleteReporter(name) {
+            delete state.reporters[name];
+            reanalyzeAllNews();
+            renderReporters();
+            showToast('已刪除記者對照');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
