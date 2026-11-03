@@ -405,14 +405,12 @@
         let pieChart = null;
         let barChart = null;
 
-        // Save state to LocalStorage
         function saveState() {
             localStorage.setItem('taitra_reporters', JSON.stringify(state.reporters));
             localStorage.setItem('taitra_press_releases', JSON.stringify(state.pressReleases));
             localStorage.setItem('taitra_news_data', JSON.stringify(state.newsData));
         }
 
-        // Initialize icons & views on load
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             reanalyzeAllNews();
@@ -421,7 +419,6 @@
             renderReporters();
         });
 
-        // Tab Navigation
         function switchTab(tabName) {
             ['dashboard', 'import', 'press', 'reporters'].forEach(t => {
                 const sec = document.getElementById(`tab-${t}`);
@@ -440,7 +437,6 @@
             }
         }
 
-        // Toast Notification
         function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-message');
@@ -451,7 +447,6 @@
 
         // ==================== NATIVE & REPRINT REASONING ENGINE ====================
         function analyzeItem(item, seenStoriesMap) {
-            // Respect manual override if user has lock set
             if (item.isManual) {
                 return {
                     isPr: item.isPr,
@@ -464,7 +459,6 @@
             const media = (item.media || '').trim();
             const reporter = (item.reporter || '').trim();
 
-            // 1. Check PR relatedness
             let isPr = false;
 
             for (const pr of state.pressReleases) {
@@ -478,7 +472,6 @@
                 isPr = true;
             }
 
-            // Exclude unrelated topics
             const excludeKws = ['鳳梨釋迦', '駐多倫多辦事處', '中市工策會', '大陸AI電影', '鄧白氏', '德國AMB'];
             if (excludeKws.some(ex => title.includes(ex))) {
                 isPr = false;
@@ -492,7 +485,6 @@
                 };
             }
 
-            // 2. Check Syndicate Platform
             if (SYNDICATE_PLATFORMS.has(media)) {
                 return {
                     isPr: '是',
@@ -501,7 +493,6 @@
                 };
             }
 
-            // 3. Check Cross-Media Reporter Attribution
             for (const [repName, repTargetMedia] of Object.entries(state.reporters)) {
                 if (reporter.includes(repName)) {
                     if (!media.includes(repTargetMedia) && !repTargetMedia.includes(media)) {
@@ -514,7 +505,6 @@
                 }
             }
 
-            // 4. Duplicate Story Check (Native vs Reprint)
             const normTitle = title.replace(/[^\w\u4e00-\u9fff]/g, '');
             if (seenStoriesMap.has(normTitle)) {
                 const firstMedia = seenStoriesMap.get(normTitle);
@@ -689,7 +679,6 @@
                     ? 'bg-emerald-50/70 hover:bg-emerald-100/80 transition text-slate-800' 
                     : 'hover:bg-slate-50 transition text-slate-600';
 
-                // Title hyperlinked if url exists
                 const titleHtml = item.url 
                     ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline flex items-center gap-1 font-medium group">
                         <span>${item.title || '-'}</span>
@@ -700,7 +689,7 @@
                 tr.innerHTML = `
                     <td class="p-3 text-center font-medium">${index + 1}</td>
                     <td class="p-3 whitespace-nowrap">${item.date || '-'}</td>
-                    <td class="p-3 font-semibold whitespace-nowrap">${item.media || '-'}</td>
+                    <td class="p-3 font-semibold whitespace-nowrap text-blue-900">${item.media || '-'}</td>
                     <td class="p-3">${titleHtml}</td>
                     <td class="p-3 whitespace-nowrap">${item.reporter || '-'}</td>
                     <td class="p-3 text-center">
@@ -767,7 +756,22 @@
             const headers = rows[headerIdx].map(h => String(h || '').trim());
             
             const colTitleIdx = headers.findIndex(h => h.includes('標題'));
-            const colMediaIdx = headers.findIndex(h => h.includes('媒體名稱') || h.includes('媒體'));
+            
+            // Smart Media Column Matcher: Prefer "媒體名稱" over "媒體" (which is Category)
+            let colMediaIdx = headers.findIndex(h => h === '媒體名稱');
+            if (colMediaIdx === -1) {
+                colMediaIdx = headers.findIndex(h => h.includes('媒體名稱'));
+            }
+            if (colMediaIdx === -1) {
+                // Fallback to "媒體", but check if next column is actual media name
+                let fallbackIdx = headers.findIndex(h => h === '媒體' || h.includes('媒體'));
+                if (fallbackIdx !== -1 && fallbackIdx + 1 < headers.length) {
+                    colMediaIdx = fallbackIdx + 1; // Take column 4 if column 3 is "媒體"
+                } else {
+                    colMediaIdx = fallbackIdx;
+                }
+            }
+
             const colDateIdx = headers.findIndex(h => h.includes('日期'));
             const colReporterIdx = headers.findIndex(h => h.includes('記者'));
             const colUrlIdx = headers.findIndex(h => h.includes('連結') || h.includes('URL') || h.includes('網址'));
@@ -787,7 +791,14 @@
                 if (!row || row.length === 0) continue;
 
                 const title = String(row[colTitleIdx] || '').trim();
-                const media = colMediaIdx !== -1 ? String(row[colMediaIdx] || '').trim() : '未知媒體';
+                let media = colMediaIdx !== -1 ? String(row[colMediaIdx] || '').trim() : '未知媒體';
+                
+                // If media accidentally picked "網路" or "報紙", try neighboring column
+                if ((media === '網路' || media === '報紙') && row.length > colMediaIdx + 1) {
+                    const nextVal = String(row[colMediaIdx + 1] || '').trim();
+                    if (nextVal && nextVal !== 'undefined') media = nextVal;
+                }
+
                 let date = colDateIdx !== -1 ? String(row[colDateIdx] || '').trim() : '';
                 const reporter = colReporterIdx !== -1 ? String(row[colReporterIdx] || '').trim() : '';
                 const url = colUrlIdx !== -1 ? String(row[colUrlIdx] || '').trim() : '';
@@ -914,7 +925,6 @@
             const keywords = kwStr.split(/[,，]/).map(k => k.trim()).filter(Boolean);
 
             if (editId) {
-                // Update existing
                 const pr = state.pressReleases.find(p => p.id == editId);
                 if (pr) {
                     pr.title = title;
@@ -922,7 +932,6 @@
                     pr.keywords = keywords;
                 }
             } else {
-                // Add new
                 state.pressReleases.unshift({
                     id: Date.now(),
                     title, date, keywords
