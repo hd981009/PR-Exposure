@@ -768,7 +768,7 @@
                 '備註說明': item.note
             }));
 
-            const worksheet = XLSX.utils.json_to_sheet(exportRows);
+            const worksheet = XLSX.utils.utils ? XLSX.utils.json_to_sheet(exportRows) : XLSX.utils.json_to_sheet(exportRows);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "原生與轉載新聞分析");
 
@@ -867,7 +867,7 @@
             lucide.createIcons();
         }
 
-        function openAddReporterModal() {
+    function openAddReporterModal() {
             document.getElementById('input-rep-name').value = '';
             document.getElementById('input-rep-media').value = '';
             document.getElementById('modal-reporter').classList.remove('hidden');
@@ -877,7 +877,7 @@
             const name = document.getElementById('input-rep-name').value.trim();
             const media = document.getElementById('input-rep-media').value.trim();
 
-            , (!name || !media) {
+            if (!name || !media) {
                 showToast('請填寫記者姓名與所屬媒體', 'error');
                 return;
             }
