@@ -169,9 +169,9 @@
                     <div>
                         <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
                             <i data-lucide="table" class="w-4 h-4 text-blue-600"></i>
-                            已監測新聞明細表 (具備即時人工覆核與去重防呆)
+                            已監測新聞明細表 (支援即時人工覆核與防呆)
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">點擊訊息標題可直接開啟原新聞連結；支援下拉選單人工覆核。</p>
+                        <p class="text-xs text-slate-400 mt-0.5">點擊訊息標題可開啟連結；可透過選單修改「是否促成」或「報導性質」。</p>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -182,9 +182,9 @@
                         </div>
 
                         <!-- Filter dropdown -->
-                        <select id="table-filter-type" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="ALL">全部報導 (含轉載與非促成)</option>
-                            <option value="NATIVE" selected>★ 僅看原生報導 (KPI必看)</option>
+                        <select id="table-filter-type" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                            <option value="ALL" selected>全部報導 (含轉載與非促成)</option>
+                            <option value="NATIVE">★ 僅看原生報導 (KPI必看)</option>
                             <option value="PR_ALL">新聞稿促成 (原生+轉載)</option>
                             <option value="REPRINT">僅看轉載報導</option>
                             <option value="OVERRIDDEN">★ 僅看人工覆核資料</option>
@@ -396,7 +396,7 @@
 
         const DEFAULT_PRESS_RELEASES = [
             { id: 1, title: '2026年新加坡科技週台北主題館 新聞稿', date: '2026-10-02', keywords: ['新加坡科技週', '新加坡科技周'] },
-            { id: 2, title: '淨零永續展與智慧能源週 (開幕/展前/閉幕)', date: '2026-10-14', keywords: ['淨零永續展', '智慧能源週', '能源週', '永續展'] },
+            { id: 2, title: '淨零永續展與智慧能源週 (開幕/展前/閉幕)', date: '2026-10-14', keywords: ['淨零永續展', '智慧能源週', '能源週', '永續展', '能源展'] },
             { id: 3, title: '2026全球防衛新局：航太暨國防產業戰略論壇', date: '2026-10-07', keywords: ['防衛新局', '航太暨國防', '國防產業', 'Shield AI'] },
             { id: 4, title: '2027年360° MOBILITY Mega Shows開放徵展報名', date: '2026-10-06', keywords: ['360° MOBILITY', 'Mega Shows', '智慧移動展'] },
             { id: 5, title: '台灣國際水週與全球水資源永續論壇', date: '2026-10-14', keywords: ['台灣國際水週', '水資源永續', '水週'] },
@@ -415,6 +415,13 @@
             pressReleases: JSON.parse(localStorage.getItem('taitra_press_releases')) || DEFAULT_PRESS_RELEASES,
             newsData: JSON.parse(localStorage.getItem('taitra_news_data')) || []
         };
+
+        // Ensure all legacy items have safe string IDs
+        state.newsData.forEach((item, idx) => {
+            if (!item.id || typeof item.id !== 'string') {
+                item.id = 'id_' + Date.now() + '_' + idx;
+            }
+        });
 
         let pieChart = null;
         let barChart = null;
@@ -505,6 +512,7 @@
 
         // ==================== NATIVE & REPRINT REASONING ENGINE ====================
         function analyzeItem(item, seenStoriesMap) {
+            // Strictly respect manual overrides!
             if (item.isManual) {
                 return {
                     isPr: item.isPr,
@@ -600,7 +608,7 @@
             saveState();
         }
 
-        // ==================== MANUAL EDIT OVERRIDE HANDLERS (FIXED ID MATCHING) ====================
+        // ==================== MANUAL EDIT OVERRIDE HANDLERS (ABSOLUTE SAFE) ====================
         function handleManualPrChange(idStr, value) {
             const item = state.newsData.find(i => String(i.id) === String(idStr));
             if (!item) return;
@@ -611,15 +619,13 @@
                 item.type = '非新聞稿促成';
                 item.note = '★ 人工覆核（設定為非新聞稿促成）';
             } else {
-                if (item.type === '非新聞稿促成') {
-                    item.type = '原生報導';
-                }
-                item.note = `★ 人工覆核（設定為新聞稿促成）`;
+                item.type = '原生報導';
+                item.note = '★ 人工覆核（設定為促成原生報導）';
             }
 
             saveState();
             renderDashboard();
-            showToast('已成功覆核並保存變更！');
+            showToast('已成功變更並保存：' + (value === '是' ? '新聞稿促成' : '非新聞稿促成'));
         }
 
         function handleManualTypeChange(idStr, value) {
@@ -639,7 +645,7 @@
 
             saveState();
             renderDashboard();
-            showToast('已成功覆核並保存變更！');
+            showToast('已成功覆核報導性質：' + value);
         }
 
         // ==================== DASHBOARD & TABLE RENDERERS ====================
@@ -751,13 +757,13 @@
                     <td class="p-3">${titleHtml}</td>
                     <td class="p-3 whitespace-nowrap">${item.reporter || '-'}</td>
                     <td class="p-3 text-center">
-                        <select onchange="handleManualPrChange('${item.id}', this.value)" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs font-bold ${item.isPr === '是' ? 'text-emerald-600' : 'text-slate-400'}">
+                        <select onchange="handleManualPrChange('${item.id}', this.value)" class="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold ${item.isPr === '是' ? 'text-emerald-600 border-emerald-300' : 'text-slate-500'}">
                             <option value="是" ${item.isPr === '是' ? 'selected' : ''}>是</option>
                             <option value="否" ${item.isPr === '否' ? 'selected' : ''}>否</option>
                         </select>
                     </td>
                     <td class="p-3 text-center">
-                        <select onchange="handleManualTypeChange('${item.id}', this.value)" class="px-2 py-1 rounded text-[11px] font-bold border border-slate-200 shadow-sm ${
+                        <select onchange="handleManualTypeChange('${item.id}', this.value)" class="px-2 py-1 rounded text-[11px] font-bold border border-slate-300 shadow-sm ${
                             isNative ? 'bg-emerald-600 text-white' : 
                             (item.type === '轉載報導' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600')
                         }">
@@ -869,7 +875,7 @@
                 } else {
                     existingKeys.add(key);
                     state.newsData.push({
-                        id: 'id_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+                        id: 'id_' + Date.now() + '_' + Math.floor(Math.random() * 100000),
                         title, media, date, reporter, url,
                         isManual: false
                     });
