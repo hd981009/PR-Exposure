@@ -169,7 +169,7 @@
                     <div>
                         <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
                             <i data-lucide="table" class="w-4 h-4 text-blue-600"></i>
-                            已監測新聞明細表 (具備自動去重防呆)
+                            已監測新聞明細表 (具備即時人工覆核與去重防呆)
                         </h3>
                         <p class="text-xs text-slate-400 mt-0.5">點擊訊息標題可直接開啟原新聞連結；支援下拉選單人工覆核。</p>
                     </div>
@@ -396,7 +396,7 @@
 
         const DEFAULT_PRESS_RELEASES = [
             { id: 1, title: '2026年新加坡科技週台北主題館 新聞稿', date: '2026-10-02', keywords: ['新加坡科技週', '新加坡科技周'] },
-            { id: 2, title: '淨零永續展與智慧能源週 (開幕/展前/閉幕)', date: '2026-10-14', keywords: ['淨零永續展', '智慧能源週', '永續展'] },
+            { id: 2, title: '淨零永續展與智慧能源週 (開幕/展前/閉幕)', date: '2026-10-14', keywords: ['淨零永續展', '智慧能源週', '能源週', '永續展'] },
             { id: 3, title: '2026全球防衛新局：航太暨國防產業戰略論壇', date: '2026-10-07', keywords: ['防衛新局', '航太暨國防', '國防產業', 'Shield AI'] },
             { id: 4, title: '2027年360° MOBILITY Mega Shows開放徵展報名', date: '2026-10-06', keywords: ['360° MOBILITY', 'Mega Shows', '智慧移動展'] },
             { id: 5, title: '台灣國際水週與全球水資源永續論壇', date: '2026-10-14', keywords: ['台灣國際水週', '水資源永續', '水週'] },
@@ -600,9 +600,9 @@
             saveState();
         }
 
-        // ==================== MANUAL EDIT OVERRIDE HANDLERS ====================
-        function handleManualPrChange(id, value) {
-            const item = state.newsData.find(i => i.id == id);
+        // ==================== MANUAL EDIT OVERRIDE HANDLERS (FIXED ID MATCHING) ====================
+        function handleManualPrChange(idStr, value) {
+            const item = state.newsData.find(i => String(i.id) === String(idStr));
             if (!item) return;
 
             item.isPr = value;
@@ -610,20 +610,20 @@
             if (value === '否') {
                 item.type = '非新聞稿促成';
                 item.note = '★ 人工覆核（設定為非新聞稿促成）';
-            } else if (item.type === '非新聞稿促成') {
-                item.type = '原生報導';
-                item.note = '★ 人工覆核（設定為新聞稿促成/原生）';
             } else {
-                item.note = `★ 人工覆核 (${item.note})`;
+                if (item.type === '非新聞稿促成') {
+                    item.type = '原生報導';
+                }
+                item.note = `★ 人工覆核（設定為新聞稿促成）`;
             }
 
             saveState();
             renderDashboard();
-            showToast('已完成人工覆核修改');
+            showToast('已成功覆核並保存變更！');
         }
 
-        function handleManualTypeChange(id, value) {
-            const item = state.newsData.find(i => i.id == id);
+        function handleManualTypeChange(idStr, value) {
+            const item = state.newsData.find(i => String(i.id) === String(idStr));
             if (!item) return;
 
             item.type = value;
@@ -639,7 +639,7 @@
 
             saveState();
             renderDashboard();
-            showToast('已完成人工覆核修改');
+            showToast('已成功覆核並保存變更！');
         }
 
         // ==================== DASHBOARD & TABLE RENDERERS ====================
@@ -778,7 +778,7 @@
             lucide.createIcons();
         }
 
-        // ==================== FILE IMPORT & DEDUPLICATION (ROBUST) ====================
+        // ==================== FILE IMPORT & DEDUPLICATION (ROBUST CLEAN ID) ====================
         function handleFileSelect(evt) {
             const file = evt.target.files[0];
             if (!file) return;
@@ -815,16 +815,14 @@
             
             const colTitleIdx = headers.findIndex(h => h.includes('標題'));
             
-            // Explicitly search for exact "媒體名稱" column, fallback if needed
             let colMediaIdx = headers.indexOf('媒體名稱');
             if (colMediaIdx === -1) {
                 colMediaIdx = headers.findIndex(h => h.includes('媒體名稱'));
             }
             if (colMediaIdx === -1) {
-                // If only "媒體" exists, check column index
                 let catIdx = headers.indexOf('媒體');
                 if (catIdx !== -1 && catIdx + 1 < headers.length) {
-                    colMediaIdx = catIdx + 1; // Usually "媒體名稱" is right after "媒體"
+                    colMediaIdx = catIdx + 1;
                 } else {
                     colMediaIdx = headers.findIndex(h => h.includes('媒體'));
                 }
@@ -842,7 +840,6 @@
             let newCount = 0;
             let dupCount = 0;
 
-            // Existing uniqueness set (Title + Media + Date) for deduplication
             const existingKeys = new Set(state.newsData.map(i => `${i.title}_${i.media}_${i.date}`));
 
             for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -852,7 +849,6 @@
                 const title = String(row[colTitleIdx] || '').trim();
                 let media = colMediaIdx !== -1 ? String(row[colMediaIdx] || '').trim() : '';
                 
-                // Safety check: if media picked category like '網路' or '報紙', grab next column
                 if ((media === '網路' || media === '報紙') && row.length > colMediaIdx + 1) {
                     const nextVal = String(row[colMediaIdx + 1] || '').trim();
                     if (nextVal && nextVal !== 'undefined') media = nextVal;
@@ -873,7 +869,7 @@
                 } else {
                     existingKeys.add(key);
                     state.newsData.push({
-                        id: Date.now() + Math.random(),
+                        id: 'id_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
                         title, media, date, reporter, url,
                         isManual: false
                     });
